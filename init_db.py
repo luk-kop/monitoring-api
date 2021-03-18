@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 from datetime import datetime
 
-# add 'query_method' or 'check_method'
+
 services_dummy_data = [
     {
         'name': 'dns-service',

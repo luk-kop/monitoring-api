@@ -8,6 +8,8 @@ from pymongo import MongoClient
 import threading
 from uuid import uuid4
 
+from dotenv import load_dotenv
+
 
 class MonitoringService:
 
@@ -91,12 +93,17 @@ class MonitoringService:
 
 
 if __name__ == "__main__":
+    # Logging configuration
     log_format = '%(asctime)s: %(message)s'
     logging.basicConfig(format=log_format, level=logging.DEBUG)
 
+    # Load environment vars
+    load_dotenv('.env-watchdog')
+    MONGODB_URL = os.getenv("MONGODB_URL")
+
     # TODO: mongo is not reachable
 
-    with MongoClient('mongodb://localhost:27017') as client:
+    with MongoClient(MONGODB_URL) as client:
         # Use 'watchdogdb' database
         db = client.watchdogdb
         watchdog = MonitoringService(db)
