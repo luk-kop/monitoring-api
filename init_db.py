@@ -1,11 +1,11 @@
 from pymongo import MongoClient
 from datetime import datetime
 
-
+# add 'query_method' or 'check_method'
 services_dummy_data = [
     {
         'name': 'dns-service',
-        'ip': '1.1.1.1',
+        'host': '1.1.1.1',
         'port': '53',
         'proto': 'udp',
         'last_responded': None,
@@ -14,7 +14,7 @@ services_dummy_data = [
     },
     {
         'name': 'home-ssh-service',
-        'ip': '192.168.1.1',
+        'host': '192.168.1.1',
         'port': '22',
         'proto': 'tcp',
         'last_responded': None,
@@ -23,7 +23,7 @@ services_dummy_data = [
     },
     {
         'name': 'home-ntp-service',
-        'ip': '192.168.1.1',
+        'host': '192.168.1.1',
         'port': '123',
         'proto': 'tcp',
         'last_responded': None,
@@ -32,7 +32,7 @@ services_dummy_data = [
     },
     {
         'name': 'localhost-nmea-service',
-        'ip': '127.0.0.1',
+        'host': '127.0.0.1',
         'port': '10110',
         'proto': 'tcp',
         'last_responded': None,
@@ -48,4 +48,3 @@ with MongoClient('mongodb://localhost:27017') as client:
     # Drop collection if exists
     services.drop()
     services.insert_many(services_dummy_data)
-

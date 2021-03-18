@@ -2,6 +2,8 @@
 import os
 from datetime import datetime
 import time
+import socket
+import logging
 from pymongo import MongoClient
 
 
@@ -19,14 +21,15 @@ class MonitoringService:
             services = self.get_services()
             if services:
                 for service in services:
-                    ip = service['ip']
+                    # TODO: check ip and continue if exception
+                    host = service['host']
                     port = service['port']
                     service_to_update = {'name': service['name']}                       # TODO: validate unique service name
                     if service['proto'] == 'tcp':
                         # timeout 1s (w 1)
-                        response = os.system(f'nc -z -w 1 {ip} {port}')
+                        response = os.system(f'nc -z -w 1 {host} {port}')
                     else:
-                        response = os.system(f'nc -zu {ip} {port}')
+                        response = os.system(f'nc -zu {host} {port}')
                     if response == 0:
                         print(f'{service["name"]} is UP!')
                         # Mark service as responded
@@ -59,8 +62,26 @@ class MonitoringService:
     def update_service(self, service):
         pass
 
+    @staticmethod
+    def check_ip(host):
+        """
+        Performs DNS query if host is not an ip address.
+        """
+        try:
+            ip = socket.gethostbyname(host)
+            print(f'Hostname: {host}, IP: {ip}')            # TODO: to delete
+            return ip
+        except socket.gaierror as err:
+            logging.error(f'{host}: {err.strerror}')
+            return False
+
 
 if __name__ == "__main__":
+    log_format = '%(asctime)s: %(message)s'
+    logging.basicConfig(format=log_format, level=logging.INFO, datefmt='%H:%M:%S')
+
+    # TODO: mongo is not reachable
+
     with MongoClient('mongodb://localhost:27017') as client:
         # Use 'watchdogdb' database
         db = client.watchdogdb
