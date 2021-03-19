@@ -1,7 +1,7 @@
 *.pyc
 __pycache__/
-.env-watchdog
-.env
+.env*
+!.env*example
 venv/
 *.db
 logs/

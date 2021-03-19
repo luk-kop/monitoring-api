@@ -101,9 +101,9 @@ if __name__ == "__main__":
 
     # Load environment vars
     load_dotenv('.env-watchdog')
-    MONGODB_URL = os.getenv("MONGODB_URL")
+    mongodb_url = os.getenv("MONGODB_URL")
 
-    with MongoClient(MONGODB_URL) as client:
+    with MongoClient(mongodb_url) as client:
         # Use 'watchdogdb' database
         db = client.watchdogdb
         watchdog = MonitoringService(db)

@@ -1,5 +1,7 @@
 from pymongo import MongoClient
 from datetime import datetime
+from dotenv import load_dotenv
+import os
 
 
 services_dummy_data = [
@@ -32,7 +34,7 @@ services_dummy_data = [
     },
     {
         'name': 'localhost-nmea-service',
-        'host': '127.0.0.1',
+        'host': '172.16.1.126',
         'port': '10110',
         'proto': 'tcp',
         'last_responded': None,
@@ -41,7 +43,11 @@ services_dummy_data = [
     }
 ]
 
-with MongoClient('mongodb://localhost:27017') as client:
+# Load environment vars
+load_dotenv('.env-watchdog')
+mongodb_url = os.getenv("MONGODB_URL")
+
+with MongoClient(mongodb_url) as client:
     # Use 'watchdogdb' db
     db = client.watchdogdb
     services = db.services
