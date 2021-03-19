@@ -1,10 +1,11 @@
 #!/usr/bin/python3
 import os
+import subprocess
 from datetime import datetime
 import time
 import socket
 import logging
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
 import threading
 from uuid import uuid4
 
@@ -52,10 +53,10 @@ class MonitoringService:
         logging.info(f'Started checking the "{service_name}" service')
         if service['proto'] == 'tcp':
             # Set timeout 1s (w 1)
-            response = os.system(f'nc -z -w 1 {host} {port}')
+            response = subprocess.run(['nc', '-z', '-w 1', host, port], capture_output=True)
         else:
-            response = os.system(f'nc -zu {host} {port}')
-        if response == 0:
+            response = subprocess.run(['nc', '-zu', host, port], capture_output=True)
+        if response.returncode == 0:
             # Mark service as responded
             response_new_value = {'$set': {'last_responded': datetime.utcnow()}}
             self.services_collection.update_one(service_to_update, response_new_value)
@@ -63,14 +64,15 @@ class MonitoringService:
             service_status = True
         else:
             service_status = False
-        logging.info(f'The "{service_name}" service is {"UP" if service_status else "DOWN"}')
         # Update service in db only if 'status' is changed
         if service_status != service['service_up']:
             status_new_value = {'$set': {'service_up': service_status}}
-            print(self.services_collection.find_one(service_to_update))  # TODO: to delete
+            # print(self.services_collection.find_one(service_to_update))  # TODO: to delete
             # Update service status (update db document)
             self.services_collection.update_one(service_to_update, status_new_value)
-            print(self.services_collection.find_one(service_to_update))  # TODO: to delete
+            # print(self.services_collection.find_one(service_to_update))  # TODO: to delete
+            logging.info(f'The "{service_name}" changed status to {"UP" if service_status else "DOWN"}')
+        logging.info(f'The "{service_name}" service is {"UP" if service_status else "DOWN"}')
 
     def get_services(self):
         """
@@ -101,11 +103,13 @@ if __name__ == "__main__":
     load_dotenv('.env-watchdog')
     MONGODB_URL = os.getenv("MONGODB_URL")
 
-    # TODO: mongo is not reachable
-
     with MongoClient(MONGODB_URL) as client:
         # Use 'watchdogdb' database
         db = client.watchdogdb
         watchdog = MonitoringService(db)
-        watchdog.start()
+        try:
+            watchdog.start()
+        except errors.ServerSelectionTimeoutError:
+            logging.error(f'MongoDB server is not reachable')
+            # TODO: some exception to exit script, container will be restarted by orchestrator
 
