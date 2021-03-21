@@ -17,8 +17,8 @@ class MonitoringService:
     def __init__(self, db, timer=10):
         self.timer = timer
         self.db = db
-        # Services collection
-        self.services_collection = self.db.services
+        # Service collection
+        self.service_collection = self.db.service
 
     def start(self):
         """
@@ -26,7 +26,7 @@ class MonitoringService:
         """
         while True:
             timer_start = time.perf_counter()
-            services = self.get_services()
+            services = self.get_service()
             if services:
                 for service in services:
                     # Check status of each service in separate thread.
@@ -49,7 +49,10 @@ class MonitoringService:
         host = service['host']
         port = service['port']
         service_name = service['name']
-        service_to_update = {'name': service_name}  # TODO: validate unique service name
+        # Get mongodb id ('_id') of current service
+        service_id = service['_id']
+        # Service will be updated using mongodb id ('_id')
+        service_to_update = {'_id': service_id}
         logging.info(f'Started checking the "{service_name}" service')
         if service['proto'] == 'tcp':
             # Set timeout 1s (w 1)
@@ -59,7 +62,7 @@ class MonitoringService:
         if response.returncode == 0:
             # Mark service as responded
             response_new_value = {'$set': {'last_responded': datetime.utcnow()}}
-            self.services_collection.update_one(service_to_update, response_new_value)
+            self.service_collection.update_one(service_to_update, response_new_value)
             service['last_responded'] = datetime.utcnow()
             service_status = True
         else:
@@ -67,18 +70,18 @@ class MonitoringService:
         # Update service in db only if 'status' is changed
         if service_status != service['service_up']:
             status_new_value = {'$set': {'service_up': service_status}}
-            # print(self.services_collection.find_one(service_to_update))  # TODO: to delete
+            # print(self.service_collection.find_one(service_to_update))  # TODO: to delete
             # Update service status (update db document)
-            self.services_collection.update_one(service_to_update, status_new_value)
-            # print(self.services_collection.find_one(service_to_update))  # TODO: to delete
+            self.service_collection.update_one(service_to_update, status_new_value)
+            # print(self.service_collection.find_one(service_to_update))  # TODO: to delete
             logging.info(f'The "{service_name}" changed status to {"UP" if service_status else "DOWN"}')
         logging.info(f'The "{service_name}" service is {"UP" if service_status else "DOWN"}')
 
-    def get_services(self):
+    def get_service(self):
         """
         Fetch all services from db.
         """
-        return self.services_collection.find()
+        return self.service_collection.find()
 
     @staticmethod
     def check_ip(host):

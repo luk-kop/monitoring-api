@@ -1,11 +1,9 @@
-from flask import Blueprint, request
-from flask_restful import Resource, reqparse
+from flask import Blueprint
+from flask_restful import Resource, reqparse, fields, marshal_with, abort
+from bson import objectid
 
 from api_service.extensions import api
-
-# TODO: to delete
-from datetime import datetime
-from uuid import uuid4
+from api_service.models import Service
 
 
 serv_bp = Blueprint('serv_bp', __name__)
@@ -15,83 +13,64 @@ parser.add_argument('name', type=str, required=True)
 parser.add_argument('price', type=float, required=True)
 
 
-services_dummy_data = [
-    {
-        'id': str(uuid4()),
-        'name': 'dns-service',
-        'host': '1.1.1.1',
-        'port': '53',
-        'proto': 'udp',
-        'last_responded': None,
-        'last_configured': datetime.utcnow().isoformat(),
-        'service_up': True
-    },
-    {
-        'id': str(uuid4()),
-        'name': 'home-ssh-service',
-        'host': '192.168.1.1',
-        'port': '22',
-        'proto': 'tcp',
-        'last_responded': None,
-        'last_configured': datetime.utcnow().isoformat(),
-        'service_up': True
-    },
-    {
-        'id': str(uuid4()),
-        'name': 'home-ntp-service',
-        'host': '192.168.1.1',
-        'port': '123',
-        'proto': 'tcp',
-        'last_responded': None,
-        'last_configured': datetime.utcnow().isoformat(),
-        'service_up': True
-    },
-    {
-        'id': str(uuid4()),
-        'name': 'localhost-nmea-service',
-        'host': '172.16.1.126',
-        'port': '10110',
-        'proto': 'tcp',
-        'last_responded': None,
-        'last_configured': datetime.utcnow().isoformat(),
-        'service_up': True
-    }
-]
+resource_fileds = {
+    'id': fields.String,
+    'name': fields.String,
+    'host': fields.String,
+    'proto': fields.String,
+    'last_responded': fields.DateTime,
+    'last_configured': fields.DateTime,
+    'likes': fields.Boolean
+}
 
 
-class Services(Resource):
+class ServicesApi(Resource):
+    # @marshal_with(resource_fileds)
     def get(self):
-        services = services_dummy_data
+        services = Service.objects().order_by('name').all()
+        services = [service.to_dict() for service in services]
         return services, 200
 
-    def post(self):
-        data = request.get_json()
-        services_dummy_data.append(data)
-        return {'service': data}, 201
+    # def post(self):
+    #     data = request.get_json()
+    #     service = Service(**data).save()
+    #     id = service.id
+    #     return {'id': str(id)}, 201
 
 
-class Service(Resource):
+class ServiceApi(Resource):
     def get(self, service_id):
-        service = next(filter(lambda x: x['id'] == service_id, services_dummy_data), None)
-        return {'service': service}, 200 if service else 404
+        # Check whether id is 24-character hex string
+        if not objectid.ObjectId.is_valid(service_id):
+            abort(404, maessage='Not valid id')
+        result = Service.objects(id=service_id)
+        if not result:
+            abort(404, maessage=f'Could not find service with id {service_id}')
+        service = Service.objects.get(id=service_id).to_dict()
+        return service, 200
 
-    def put(self, service_id):
-        # TODO: change to: data = parser.parse_args()
-        data = request.get_json()
-        service = next(filter(lambda x: x['id'] == service_id, services_dummy_data), None)
-        if service:
-            service.update(data)
-            return {'service': service}, 200
-        else:
-            data['id'] = service_id
-            services_dummy_data.append(data)
-            return {'service': data}, 201
+    # def put(self, service_id):
+    #     # TODO: change to: data = parser.parse_args()
+    #     data = request.get_json()
+    #     service = next(filter(lambda x: x['id'] == service_id, services_dummy_data), None)
+    #     if service:
+    #         service.update(data)
+    #         return {'service': service}, 200
+    #     else:
+    #         data['id'] = service_id
+    #         services_dummy_data.append(data)
+    #         return {'service': data}, 201
 
     def delete(self, service_id):
-        global services_dummy_data
-        services_dummy_data = list(filter(lambda x: x['id'] != service_id, services_dummy_data))
-        return {'message': f'item {service_id} deleted'}, 200
+        # Check whether id is 24-character hex string
+        if not objectid.ObjectId.is_valid(service_id):
+            abort(404, maessage='Not valid id')
+        result = Service.objects(id=service_id)
+        if not result:
+            abort(404, maessage='Service doesn\'t exist, can\'t delete')
+        Service.objects.get(id=service_id).delete()
+        return {'message': f'service {service_id} deleted'}, 200
 
 
-api.add_resource(Services, '/services')
-api.add_resource(Service, '/services/<string:id>')
+api.add_resource(ServicesApi, '/services')
+api.add_resource(ServiceApi, '/services/<string:service_id>')
