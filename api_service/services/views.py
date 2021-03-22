@@ -1,9 +1,10 @@
 from flask import Blueprint
-from flask_restful import Resource, reqparse, fields, marshal_with, abort
+from flask_restful import Resource, reqparse, fields, marshal_with, abort, marshal_with_field
 from bson import objectid
 
 from api_service.extensions import api
 from api_service.models import Service
+from api_service.services.fields_custom import service_fields, services_fields
 
 
 serv_bp = Blueprint('serv_bp', __name__)
@@ -13,23 +14,19 @@ parser.add_argument('name', type=str, required=True)
 parser.add_argument('price', type=float, required=True)
 
 
-resource_fileds = {
-    'id': fields.String,
-    'name': fields.String,
-    'host': fields.String,
-    'proto': fields.String,
-    'last_responded': fields.DateTime,
-    'last_configured': fields.DateTime,
-    'likes': fields.Boolean
-}
-
-
 class ServicesApi(Resource):
-    # @marshal_with(resource_fileds)
+    @marshal_with(services_fields)
     def get(self):
         services = Service.objects().order_by('name').all()
-        services = [service.to_dict() for service in services]
-        return services, 200
+        services_count = Service.objects().count()
+        services_count_up = Service.objects(service_up=True).count()
+        response = {
+            'services_number': services_count,
+            'services_up': services_count_up,
+            'services': services,
+        }
+        # services = [service.to_dict() for service in services]
+        return response, 200
 
     # def post(self):
     #     data = request.get_json()
@@ -37,8 +34,16 @@ class ServicesApi(Resource):
     #     id = service.id
     #     return {'id': str(id)}, 201
 
+# {
+#     "number_of_services": 2,
+#     "services": {
+#
+#     }
+# }
+
 
 class ServiceApi(Resource):
+    @marshal_with(service_fields, envelope='service')
     def get(self, service_id):
         # Check whether id is 24-character hex string
         if not objectid.ObjectId.is_valid(service_id):
@@ -46,7 +51,8 @@ class ServiceApi(Resource):
         result = Service.objects(id=service_id)
         if not result:
             abort(404, maessage=f'Could not find service with id {service_id}')
-        service = Service.objects.get(id=service_id).to_dict()
+        # service = result.first().to_dict()
+        service = result.first()
         return service, 200
 
     # def put(self, service_id):

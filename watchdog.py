@@ -26,8 +26,9 @@ class MonitoringService:
         """
         while True:
             timer_start = time.perf_counter()
-            services = self.get_service()
-            if services:
+            services = self.service_collection.find()
+            # Checks if there are any documents in the collection
+            if self.service_collection.count_documents({}):
                 for service in services:
                     # Check status of each service in separate thread.
                     status_thread = threading.Thread(target=self.check_service_status,
@@ -35,6 +36,8 @@ class MonitoringService:
                                                      daemon=True,
                                                      name=f'service-{uuid4().hex}')
                     status_thread.start()
+            else:
+                logging.info('No service documents in the db')
             time_interval = time.perf_counter() - timer_start
             if time_interval > self.timer:
                 continue
@@ -76,12 +79,6 @@ class MonitoringService:
             # print(self.service_collection.find_one(service_to_update))  # TODO: to delete
             logging.info(f'The "{service_name}" changed status to {"UP" if service_status else "DOWN"}')
         logging.info(f'The "{service_name}" service is {"UP" if service_status else "DOWN"}')
-
-    def get_service(self):
-        """
-        Fetch all services from db.
-        """
-        return self.service_collection.find()
 
     @staticmethod
     def check_ip(host):

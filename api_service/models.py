@@ -14,7 +14,7 @@ class Service(db.Document):
 
     def to_dict(self):
         """
-
+        Render model as dict
         :return: dict
         """
         return {
