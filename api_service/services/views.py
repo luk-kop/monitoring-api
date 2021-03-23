@@ -1,17 +1,15 @@
-from flask import Blueprint
-from flask_restful import Resource, reqparse, fields, marshal_with, abort, marshal_with_field
+from flask import Blueprint, request
+from flask_restful import Resource, reqparse, marshal_with, abort
 from bson import objectid
+from marshmallow import ValidationError
 
 from api_service.extensions import api
 from api_service.models import Service
 from api_service.services.fields_custom import service_fields, services_fields
+from api_service.services.schemas import ServiceSchema
 
 
 serv_bp = Blueprint('serv_bp', __name__)
-
-parser = reqparse.RequestParser()
-parser.add_argument('name', type=str, required=True)
-parser.add_argument('price', type=float, required=True)
 
 
 class ServicesApi(Resource):
@@ -28,18 +26,16 @@ class ServicesApi(Resource):
         # services = [service.to_dict() for service in services]
         return response, 200
 
-    # def post(self):
-    #     data = request.get_json()
-    #     service = Service(**data).save()
-    #     id = service.id
-    #     return {'id': str(id)}, 201
-
-# {
-#     "number_of_services": 2,
-#     "services": {
-#
-#     }
-# }
+    def post(self):
+        schema = ServiceSchema()
+        request_data = request.get_json()
+        print(request)
+        print(request_data)
+        try:
+            result = schema.load(request_data)
+        except ValidationError as error:
+            abort(400, maessage=error.messages)
+        return {'id': str(result.id)}, 201
 
 
 class ServiceApi(Resource):

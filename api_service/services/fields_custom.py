@@ -6,6 +6,7 @@ service_fields = {
     'name': fields.String,
     'host': fields.String,
     'proto': fields.String,
+    'port': fields.String,
     'last_responded': fields.DateTime(dt_format='iso8601'),
     'last_configured': fields.DateTime(dt_format='iso8601'),
     'service_up': fields.Boolean

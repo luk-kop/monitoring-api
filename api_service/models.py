@@ -21,6 +21,7 @@ class Service(db.Document):
             'id': str(self.id),
             'name': self.name,
             'port': self.port,
+            'host': self.host,
             'proto': self.proto,
             'last_responded': self.last_responded.isoformat() if self.last_responded else None,
             'last_configured': self.last_configured.isoformat(),
