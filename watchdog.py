@@ -73,7 +73,6 @@ class MonitoringService:
         if response.returncode == 0:
             # Mark service as responded
             response_time_update = {'$set': {'timestamps.last_responded': datetime.utcnow()}}
-            print(service_to_update, response_time_update)
             self.service_collection.update_one(service_to_update, response_time_update)
             service_status = True
         else:
@@ -99,7 +98,6 @@ class MonitoringService:
         """
         try:
             ip = socket.gethostbyname(hostname)
-            print(f'Hostname: {hostname}, IP: {ip}')            # TODO: to delete
             return ip
         except socket.gaierror as err:
             logging.error(f'{hostname}: {err.strerror}')
