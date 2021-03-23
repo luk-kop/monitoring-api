@@ -3,27 +3,35 @@ from datetime import datetime
 from api_service.extensions import db
 
 
+class Timestamps(db.EmbeddedDocument):
+    """
+    Model representing the 'timestamps' field of the 'service' document.
+    """
+    last_configured = db.DateTimeField(default=datetime.utcnow())
+    last_responded = db.DateTimeField()
+    last_tested = db.DateTimeField()
+    created_at = db.DateTimeField()
+
+
+class Host(db.EmbeddedDocument):
+    """
+    Model representing the 'host' field of the 'service' document.
+    """
+    type = db.StringField()
+    value = db.StringField()
+
+
 class Service(db.Document):
+    """
+    Model representing a 'service' document in MongoDB.
+    """
     name = db.StringField(max_length=30, required=True, unique=True)
-    host = db.StringField(max_length=30, required=True)
+    host = db.EmbeddedDocumentField(Host)
     port = db.StringField(max_length=8, required=True)
     proto = db.StringField(max_length=3, choices=('tcp', 'udp'))
-    last_responded = db.DateTimeField()
-    last_configured = db.DateTimeField(default=datetime.utcnow())
+    timestamps = db.EmbeddedDocumentField(Timestamps)
     service_up = db.BooleanField(required=True, default=False)
 
-    def to_dict(self):
-        """
-        Render model as dict
-        :return: dict
-        """
-        return {
-            'id': str(self.id),
-            'name': self.name,
-            'port': self.port,
-            'host': self.host,
-            'proto': self.proto,
-            'last_responded': self.last_responded.isoformat() if self.last_responded else None,
-            'last_configured': self.last_configured.isoformat(),
-            'service_up': self.service_up
-        }
+
+
+

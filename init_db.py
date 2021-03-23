@@ -2,44 +2,87 @@ from pymongo import MongoClient
 from datetime import datetime
 from dotenv import load_dotenv
 import os
-from uuid import uuid4
 
 
 services_dummy_data = [
     {
         'name': 'dns-service',
-        'host': '1.1.1.1',
+        'host': {
+            'type': 'ip',
+            'value': '1.1.1.1'
+        },
         'port': '53',
         'proto': 'udp',
-        'last_responded': None,
-        'last_configured': datetime.utcnow(),
+        'timestamps': {
+            'last_configured': datetime.utcnow(),
+            'last_responded': None,
+            'last_tested': None,
+            'created_at': datetime.utcnow(),
+        },
         'service_up': True
     },
     {
         'name': 'home-ssh-service',
-        'host': '192.168.1.1',
+        'host': {
+            'type': 'ip',
+            'value': '192.168.1.1'
+        },
         'port': '22',
         'proto': 'tcp',
-        'last_responded': None,
-        'last_configured': datetime.utcnow(),
+        'timestamps': {
+            'last_configured': datetime.utcnow(),
+            'last_responded': None,
+            'last_tested': None,
+            'created_at': datetime.utcnow(),
+        },
         'service_up': True
     },
     {
         'name': 'home-ntp-service',
-        'host': '192.168.1.1',
+        'host': {
+            'type': 'ip',
+            'value': '192.168.1.1'
+        },
         'port': '123',
         'proto': 'tcp',
-        'last_responded': None,
-        'last_configured': datetime.utcnow(),
+        'timestamps': {
+            'last_configured': datetime.utcnow(),
+            'last_responded': None,
+            'last_tested': None,
+            'created_at': datetime.utcnow(),
+        },
         'service_up': True
     },
     {
         'name': 'localhost-nmea-service',
-        'host': '172.16.1.126',
+        'host': {
+            'type': 'ip',
+            'value': '172.16.1.126'
+        },
         'port': '10110',
         'proto': 'tcp',
-        'last_responded': None,
-        'last_configured': datetime.utcnow(),
+        'timestamps': {
+            'last_configured': datetime.utcnow(),
+            'last_responded': None,
+            'last_tested': None,
+            'created_at': datetime.utcnow(),
+        },
+        'service_up': True
+    },
+    {
+        'name': 'dns-google',
+        'host': {
+            'type': 'hostname',
+            'value': 'google-public-dns-b.google.com'
+        },
+        'port': '53',
+        'proto': 'tcp',
+        'timestamps': {
+            'last_configured': datetime.utcnow(),
+            'last_responded': None,
+            'last_tested': None,
+            'created_at': datetime.utcnow(),
+        },
         'service_up': True
     }
 ]

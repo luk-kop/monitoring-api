@@ -1,14 +1,25 @@
 from flask_restful import fields
 
 
+host_field = {
+    'type': fields.String,
+    'value': fields.String
+}
+
+timestamps_field = {
+    'last_configured': fields.DateTime(dt_format='iso8601'),
+    'last_responded': fields.DateTime(dt_format='iso8601'),
+    'last_tested': fields.DateTime(dt_format='iso8601'),
+    'created_at': fields.DateTime(dt_format='iso8601'),
+}
+
 service_fields = {
     'id': fields.String,
     'name': fields.String,
-    'host': fields.String,
+    'host': fields.Nested(host_field),
     'proto': fields.String,
     'port': fields.String,
-    'last_responded': fields.DateTime(dt_format='iso8601'),
-    'last_configured': fields.DateTime(dt_format='iso8601'),
+    'timestamps': fields.Nested(timestamps_field),
     'service_up': fields.Boolean
 }
 
