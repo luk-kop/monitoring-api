@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import os
+import sys
 import subprocess
 from datetime import datetime
 import time
@@ -48,28 +49,39 @@ class MonitoringService:
         """
         Checks the status of a particular service.
         """
-        # TODO: check ip and continue if exception
-        host = service['host']
+        host_type = service['host']['type']
+        host_value = service['host']['value']
         port = service['port']
         service_name = service['name']
         # Get mongodb id ('_id') of current service
         service_id = service['_id']
-        # Service will be updated using mongodb id ('_id')
+        # Service will be updated using MongoDB id ('_id')
         service_to_update = {'_id': service_id}
         logging.info(f'Started checking the "{service_name}" service')
+
+        # Check host type and resolve hostname to ip if needed.
+        if host_type == 'hostname':
+            host_value = self.resolve_hostname(host_value)
+            if not host_value:
+                # Close thread if problem with resolving occurred.
+                sys.exit()
         if service['proto'] == 'tcp':
             # Set timeout 1s (w 1)
-            response = subprocess.run(['nc', '-z', '-w 1', host, port], capture_output=True)
+            response = subprocess.run(['nc', '-z', '-w 1', host_value, port], capture_output=True)
         else:
-            response = subprocess.run(['nc', '-zu', host, port], capture_output=True)
+            response = subprocess.run(['nc', '-zu', host_value, port], capture_output=True)
         if response.returncode == 0:
             # Mark service as responded
-            response_new_value = {'$set': {'last_responded': datetime.utcnow()}}
-            self.service_collection.update_one(service_to_update, response_new_value)
-            service['last_responded'] = datetime.utcnow()
+            response_time_update = {'$set': {'timestamps.last_responded': datetime.utcnow()}}
+            print(service_to_update, response_time_update)
+            self.service_collection.update_one(service_to_update, response_time_update)
             service_status = True
         else:
             service_status = False
+        # Mark service as tested
+        tested_time_update = {'$set': {'timestamps.last_tested': datetime.utcnow()}}
+        self.service_collection.update_one(service_to_update, tested_time_update)
+
         # Update service in db only if 'status' is changed
         if service_status != service['service_up']:
             status_new_value = {'$set': {'service_up': service_status}}
@@ -81,16 +93,16 @@ class MonitoringService:
         logging.info(f'The "{service_name}" service is {"UP" if service_status else "DOWN"}')
 
     @staticmethod
-    def check_ip(host):
+    def resolve_hostname(hostname):
         """
         Performs DNS query if host is not an ip address.
         """
         try:
-            ip = socket.gethostbyname(host)
-            print(f'Hostname: {host}, IP: {ip}')            # TODO: to delete
+            ip = socket.gethostbyname(hostname)
+            print(f'Hostname: {hostname}, IP: {ip}')            # TODO: to delete
             return ip
         except socket.gaierror as err:
-            logging.error(f'{host}: {err.strerror}')
+            logging.error(f'{hostname}: {err.strerror}')
             return False
 
 

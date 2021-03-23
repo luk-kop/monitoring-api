@@ -10,7 +10,7 @@ class Timestamps(db.EmbeddedDocument):
     last_configured = db.DateTimeField(default=datetime.utcnow())
     last_responded = db.DateTimeField()
     last_tested = db.DateTimeField()
-    created_at = db.DateTimeField()
+    created_at = db.DateTimeField(default=datetime.utcnow())
 
 
 class Host(db.EmbeddedDocument):

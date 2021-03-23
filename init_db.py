@@ -22,6 +22,22 @@ services_dummy_data = [
         'service_up': True
     },
     {
+        'name': 'wrong-hostname',
+        'host': {
+            'type': 'hostname',
+            'value': 'xxx.local.sdsdsd'
+        },
+        'port': '123',
+        'proto': 'udp',
+        'timestamps': {
+            'last_configured': datetime.utcnow(),
+            'last_responded': None,
+            'last_tested': None,
+            'created_at': datetime.utcnow(),
+        },
+        'service_up': True
+    },
+    {
         'name': 'home-ssh-service',
         'host': {
             'type': 'ip',
