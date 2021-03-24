@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from flask_restful import Resource, reqparse, marshal_with, abort
+from flask_restful import Resource, marshal_with, abort
 from bson import objectid
 from marshmallow import ValidationError
 
@@ -16,21 +16,18 @@ class ServicesApi(Resource):
     @marshal_with(services_fields)
     def get(self):
         services = Service.objects().order_by('name').all()
-        services_count = Service.objects().count()
+        services_count_all = Service.objects().count()
         services_count_up = Service.objects(service_up=True).count()
         response = {
-            'services_number': services_count,
+            'services_number': services_count_all,
             'services_up': services_count_up,
             'services': services,
         }
-        # services = [service.to_dict() for service in services]
         return response, 200
 
     def post(self):
         schema = ServiceSchema()
         request_data = request.get_json()
-        print(request)
-        print(request_data)
         try:
             result = schema.load(request_data)
         except ValidationError as error:
@@ -39,16 +36,27 @@ class ServicesApi(Resource):
 
 
 class ServiceApi(Resource):
+    @staticmethod
+    def check_service_exist(service_id):
+        """
+        Check whether the service with the specified id exists.
+        """
+        if not Service.objects(id=service_id):
+            abort(404, maessage=f'Service with id {service_id} doesn\'t exist')
+
+    @staticmethod
+    def check_id(service_id):
+        """
+        Check whether id is 24-character hex string.
+        """
+        if not objectid.ObjectId.is_valid(service_id):
+            abort(400, maessage='Not valid id')
+
     @marshal_with(service_fields, envelope='service')
     def get(self, service_id):
-        # Check whether id is 24-character hex string
-        if not objectid.ObjectId.is_valid(service_id):
-            abort(404, maessage='Not valid id')
-        result = Service.objects(id=service_id)
-        if not result:
-            abort(404, maessage=f'Could not find service with id {service_id}')
-        # service = result.first().to_dict()
-        service = result.first()
+        self.check_id(service_id)
+        self.check_service_exist(service_id)
+        service = Service.objects(id=service_id).first()
         return service, 200
 
     # def put(self, service_id):
@@ -63,13 +71,14 @@ class ServiceApi(Resource):
     #         services_dummy_data.append(data)
     #         return {'service': data}, 201
 
+    def patch(self, service_id):
+        self.check_id(service_id)
+        self.check_service_exist(service_id)
+        pass
+
     def delete(self, service_id):
-        # Check whether id is 24-character hex string
-        if not objectid.ObjectId.is_valid(service_id):
-            abort(404, maessage='Not valid id')
-        result = Service.objects(id=service_id)
-        if not result:
-            abort(404, maessage='Service doesn\'t exist, can\'t delete')
+        self.check_id(service_id)
+        self.check_service_exist(service_id)
         Service.objects.get(id=service_id).delete()
         return {'message': f'service {service_id} deleted'}, 200
 

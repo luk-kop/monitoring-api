@@ -7,10 +7,10 @@ host_field = {
 }
 
 timestamps_field = {
-    'last_configured': fields.DateTime(dt_format='iso8601'),
     'last_responded': fields.DateTime(dt_format='iso8601'),
     'last_tested': fields.DateTime(dt_format='iso8601'),
-    'created_at': fields.DateTime(dt_format='iso8601'),
+    'created': fields.DateTime(dt_format='iso8601'),
+    'edited': fields.DateTime(dt_format='iso8601')
 }
 
 service_fields = {

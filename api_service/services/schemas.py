@@ -1,7 +1,7 @@
 import re
 
 from marshmallow import Schema, fields, post_load, validates, ValidationError, validates_schema
-from marshmallow.validate import OneOf
+from marshmallow.validate import OneOf, Length
 
 from api_service.models import Service
 
@@ -15,7 +15,8 @@ class HostSchema(Schema):
                       validate=OneOf(choices=['hostname', 'ip'],
                                      error='Not valid host type. Use ip or hostname'))
     value = fields.Str(required=True,
-                       error_messages={"required": "Host value is required."})
+                       error_messages={"required": "Host value is required."},
+                       validate=Length(max=30))
 
     @validates_schema
     def validate_value(self, data, ** kwargs):
@@ -40,10 +41,12 @@ class ServiceSchema(Schema):
     Schema for serializing 'service' POST (JSON).
     """
     name = fields.Str(required=True,
-                      error_messages={"required": "name is required"})
+                      error_messages={"required": "name is required"},
+                      validate=Length(max=30))
     host = fields.Nested(HostSchema())
     port = fields.Str(required=True,
-                      error_messages={"required": "port is required"})
+                      error_messages={"required": "port is required"},
+                      validate=Length(max=8))
     proto = fields.Str(required=True,
                        error_messages={"required": "proto is required"},
                        validate=OneOf(choices=['tcp', 'udp'],
@@ -52,7 +55,7 @@ class ServiceSchema(Schema):
     @validates('name')
     def validate_name(self, name):
         if Service.objects(name=name):
-            raise ValidationError(f'Service {name} name already exists, please use a different name')
+            raise ValidationError(f'Service {name} already exists, please use a different name')
 
     @validates('port')
     def validate_port(self, port):

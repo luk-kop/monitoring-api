@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import os
 import sys
 import subprocess
@@ -43,7 +42,6 @@ class MonitoringService:
             if time_interval > self.timer:
                 continue
             time.sleep(self.timer - time_interval)
-            # print([thread.name for thread in threading.enumerate()])      # TODO" to delete
 
     def check_service_status(self, service):
         """
@@ -84,10 +82,8 @@ class MonitoringService:
         # Update service in db only if 'status' is changed
         if service_status != service['service_up']:
             status_new_value = {'$set': {'service_up': service_status}}
-            # print(self.service_collection.find_one(service_to_update))  # TODO: to delete
             # Update service status (update db document)
             self.service_collection.update_one(service_to_update, status_new_value)
-            # print(self.service_collection.find_one(service_to_update))  # TODO: to delete
             logging.info(f'The "{service_name}" changed status to {"UP" if service_status else "DOWN"}')
         logging.info(f'The "{service_name}" service is {"UP" if service_status else "DOWN"}')
 
@@ -113,7 +109,8 @@ if __name__ == "__main__":
     load_dotenv('.env-watchdog')
     mongodb_url = os.getenv("MONGODB_URL")
 
-    with MongoClient(mongodb_url) as client:
+    with MongoClient(host=mongodb_url, serverSelectionTimeoutMS=10000) as client:
+        # MongoDB connection timeout is set to 10s
         # Use 'watchdogdb' database
         db = client.watchdogdb
         watchdog = MonitoringService(db)
@@ -121,5 +118,3 @@ if __name__ == "__main__":
             watchdog.start()
         except errors.ServerSelectionTimeoutError:
             logging.error(f'MongoDB server is not reachable')
-            # TODO: some exception to exit script, container will be restarted by orchestrator
-

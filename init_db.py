@@ -14,10 +14,10 @@ services_dummy_data = [
         'port': '53',
         'proto': 'udp',
         'timestamps': {
-            'last_configured': datetime.utcnow(),
             'last_responded': None,
             'last_tested': None,
-            'created_at': datetime.utcnow(),
+            'created': datetime.utcnow(),
+            'edited': datetime.utcnow()
         },
         'service_up': True
     },
@@ -30,10 +30,10 @@ services_dummy_data = [
         'port': '123',
         'proto': 'udp',
         'timestamps': {
-            'last_configured': datetime.utcnow(),
             'last_responded': None,
             'last_tested': None,
-            'created_at': datetime.utcnow(),
+            'created': datetime.utcnow(),
+            'edited': datetime.utcnow()
         },
         'service_up': True
     },
@@ -46,10 +46,10 @@ services_dummy_data = [
         'port': '22',
         'proto': 'tcp',
         'timestamps': {
-            'last_configured': datetime.utcnow(),
             'last_responded': None,
             'last_tested': None,
-            'created_at': datetime.utcnow(),
+            'created': datetime.utcnow(),
+            'edited': datetime.utcnow()
         },
         'service_up': True
     },
@@ -62,10 +62,10 @@ services_dummy_data = [
         'port': '123',
         'proto': 'tcp',
         'timestamps': {
-            'last_configured': datetime.utcnow(),
             'last_responded': None,
             'last_tested': None,
-            'created_at': datetime.utcnow(),
+            'created': datetime.utcnow(),
+            'edited': datetime.utcnow()
         },
         'service_up': True
     },
@@ -78,10 +78,10 @@ services_dummy_data = [
         'port': '10110',
         'proto': 'tcp',
         'timestamps': {
-            'last_configured': datetime.utcnow(),
             'last_responded': None,
             'last_tested': None,
-            'created_at': datetime.utcnow(),
+            'created': datetime.utcnow(),
+            'edited': datetime.utcnow()
         },
         'service_up': True
     },
@@ -94,10 +94,10 @@ services_dummy_data = [
         'port': '53',
         'proto': 'tcp',
         'timestamps': {
-            'last_configured': datetime.utcnow(),
             'last_responded': None,
             'last_tested': None,
-            'created_at': datetime.utcnow(),
+            'created': datetime.utcnow(),
+            'edited': datetime.utcnow()
         },
         'service_up': True
     }
