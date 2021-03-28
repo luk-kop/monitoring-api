@@ -26,17 +26,17 @@ class ServicesApi(Resource):
         page_limit_default = current_app.config.get('DEFAULT_PAGINATION_LIMIT')
         next_id = data_query_params.get('next', '')
         page_limit = data_query_params.get('limit', page_limit_default)
-
-        print(api.url_for(ServicesApi, limit=page_limit, next=next_id, _external=True)) # TODO:
-
+        # Get services with custom pagination
         services = Service.paginate_custom(next_id=next_id, page_limit=page_limit)
-        print(services.next)
-        print(f'current: {services.current.id if services.current else services.current}')
-        print(f'next: {services.next.id if services.next else services.next}')
-
+        # Get next page url
+        if services.next:
+            next_url = api.url_for(ServicesApi, limit=page_limit if page_limit else '', next=services.next.id, _external=True)
+        else:
+            next_url = ''
+        # Get number of running services
         services_count_up = Service.objects(service_up=True).count()
         links = {
-            'next': services.next.id if services.next else '',
+            'next': next_url,
             'self': request.url
         }
         dumped_services = {
