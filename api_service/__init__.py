@@ -22,6 +22,8 @@ def register_extensions(app):
     """
     Register Flask extensions.
     """
+    api.add_resource(serv_views.ServicesApi, '/services')
+    api.add_resource(serv_views.ServiceApi, '/services/<string:service_id>')
     api.init_app(app)
     db.init_app(app)
 

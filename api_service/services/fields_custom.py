@@ -7,10 +7,15 @@ host_field = {
 }
 
 timestamps_field = {
-    'last_responded': fields.DateTime(dt_format='iso8601'),
-    'last_tested': fields.DateTime(dt_format='iso8601'),
+    'last_responded': fields.DateTime(dt_format='iso8601', default=''),
+    'last_tested': fields.DateTime(dt_format='iso8601', default=''),
     'created': fields.DateTime(dt_format='iso8601'),
-    'edited': fields.DateTime(dt_format='iso8601')
+    'edited': fields.DateTime(dt_format='iso8601', default='')
+}
+
+links_field = {
+    'next': fields.String,
+    'self': fields.String
 }
 
 service_fields = {
@@ -24,7 +29,9 @@ service_fields = {
 }
 
 services_fields = {
-    'services_number': fields.Integer,
+    '_links': fields.Nested(links_field),
+    'limit': fields.Integer,
+    'services_total': fields.Integer,
     'services_up': fields.Integer,
     'services': fields.List(fields.Nested(service_fields)),
 }

@@ -1,7 +1,9 @@
 import re
 
-from marshmallow import Schema, fields, post_load, validates, ValidationError, validates_schema
+from flask import current_app
+from marshmallow import Schema, fields, post_load, pre_load, validates, ValidationError, validates_schema
 from marshmallow.validate import OneOf, Length
+from bson import objectid
 
 from api_service.models import Service
 
@@ -11,11 +13,11 @@ class HostSchema(Schema):
     Schema used as nested field in 'ServiceSchema'.
     """
     type = fields.Str(required=True,
-                      error_messages={"required": "Host type is required."},
+                      error_messages={"required": "host type field is required."},
                       validate=OneOf(choices=['hostname', 'ip'],
-                                     error='Not valid host type. Use ip or hostname'))
+                                     error='not valid host type (use ip or hostname)'))
     value = fields.Str(required=True,
-                       error_messages={"required": "Host value is required."},
+                       error_messages={"required": "host value field is required."},
                        validate=Length(max=30))
 
     @validates_schema
@@ -25,7 +27,7 @@ class HostSchema(Schema):
                       r'([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$'
             mo = re.match(pattern, data['value'])
             if not mo:
-                raise ValidationError({'value': ['Not valid hostname']})
+                raise ValidationError({'value': ['not valid hostname']})
         else:
             # Regex matches only unicast IP addresses from range 0.0.0.0 - 223.255.255.255
             pattern = r'^((22[0-3]\.|2[0-1][0-9]\.|[0-1][0-9]{2}\.|[0-9]{1,2}\.)' \
@@ -33,7 +35,7 @@ class HostSchema(Schema):
                       r'(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[0-9]{1,2}))$'
             mo = re.match(pattern, data['value'])
             if not mo:
-                raise ValidationError({'value': ['Not valid ip address']})
+                raise ValidationError({'value': ['not valid ip address']})
 
 
 class ServiceSchema(Schema):
@@ -41,31 +43,82 @@ class ServiceSchema(Schema):
     Schema for serializing 'service' POST (JSON).
     """
     name = fields.Str(required=True,
-                      error_messages={"required": "name is required"},
+                      error_messages={"required": "name field is required"},
                       validate=Length(max=30))
-    host = fields.Nested(HostSchema())
+    host = fields.Nested(HostSchema(),
+                         error_messages={"required": "host field is required"},
+                         required=True)
     port = fields.Str(required=True,
-                      error_messages={"required": "port is required"},
+                      error_messages={"required": "port field is required"},
                       validate=Length(max=8))
     proto = fields.Str(required=True,
-                       error_messages={"required": "proto is required"},
+                       error_messages={"required": "proto field is required"},
                        validate=OneOf(choices=['tcp', 'udp'],
-                                      error='Not valid protocol. Use tcp or udp'))
+                                      error='not valid protocol. use tcp or udp'))
+
+    @pre_load
+    def validate_type(self, data, **kwargs):
+        if not isinstance(data, dict):
+            raise ValidationError('invalid input type.', 'services')
+        return data
 
     @validates('name')
     def validate_name(self, name):
         if Service.objects(name=name):
-            raise ValidationError(f'Service {name} already exists, please use a different name')
+            raise ValidationError(f'service {name} already exists, please use a different name')
 
     @validates('port')
     def validate_port(self, port):
         try:
             port = int(port)
         except ValueError:
-            raise ValidationError('Not valid network port')
+            raise ValidationError('not valid network port')
         if port not in range(0, 65353):
-            raise ValidationError('Not valid network port')
+            raise ValidationError('not valid network port')
 
     @post_load
     def create_service(self, data, **kwargs):
         return Service(**data).save()
+
+
+class GetServiceSchema(Schema):
+    """
+    Schema for serializing 'service' query params.
+    """
+    next = fields.Str()
+    limit = fields.Integer()
+
+    @validates('next')
+    def validate_next(self, next_id):
+        if next_id and not objectid.ObjectId.is_valid(next_id):
+            raise ValidationError('not valid id')
+        if next_id and not Service.objects(id=next_id):
+            raise ValidationError(f'service with id {next_id} doesn\'t exist')
+
+    @validates('limit')
+    def validate_limit(self, limit):
+        limit_max = current_app.config.get('MAX_PAGINATION_LIMIT')
+        if limit not in range(1, limit_max + 1):
+            raise ValidationError(f'not valid limit (limit range 1-{limit_max})')
+
+
+def error_parser(error):
+    """
+    Custom error output
+    """
+    errors_new = {}
+    for field, value in error.messages.items():
+        if isinstance(value, dict):
+            inside_dict = {}
+            for key_in, val_in in value.items():
+                if len(val_in) == 1:
+                    inside_dict[key_in] = val_in[0]
+                else:
+                    inside_dict[key_in] = val_in
+            errors_new[field] = inside_dict
+        else:
+            if len(value) == 1:
+                errors_new[field] = value[0]
+            else:
+                errors_new[field] = value
+    return errors_new

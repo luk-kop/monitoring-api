@@ -113,4 +113,4 @@ with MongoClient(mongodb_url) as client:
     service = db.service
     # Drop collection if exists
     service.drop()
-    service.insert_many(services_dummy_data)
+    # service.insert_many(services_dummy_data)

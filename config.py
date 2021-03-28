@@ -19,3 +19,7 @@ class Config:
     MONGODB_SETTINGS = {
         'host': os.environ.get('MONGODB_URL'),
     }
+    # Default number of documents on page (api results pagination)
+    DEFAULT_PAGINATION_LIMIT = 6
+    MAX_PAGINATION_LIMIT = 30
+
