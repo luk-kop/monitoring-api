@@ -1,7 +1,7 @@
 import re
 
 from flask import current_app
-from marshmallow import Schema, fields, post_load, pre_load, validates, ValidationError, validates_schema
+from marshmallow import Schema, fields, post_load, post_dump, pre_load, validates, ValidationError, validates_schema
 from marshmallow.validate import OneOf, Length
 from bson import objectid
 
@@ -21,7 +21,7 @@ class HostSchema(Schema):
                        validate=Length(max=30))
 
     @validates_schema
-    def validate_value(self, data, ** kwargs):
+    def validate_host(self, data, ** kwargs):
         if data['type'] == 'hostname':
             pattern = r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*' \
                       r'([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$'
@@ -37,29 +37,57 @@ class HostSchema(Schema):
             if not mo:
                 raise ValidationError({'value': ['Not valid ip address']})
 
+    class Meta:
+        ordered = True
+
+
+class TimestampsSchema(Schema):
+    """
+    Schema used as nested field in 'ServiceSchema'.
+    """
+    last_responded = fields.DateTime(dump_only=True)
+    last_tested = fields.DateTime(dump_only=True)
+    created = fields.DateTime(dump_only=True)
+    edited = fields.DateTime(dump_only=True)
+
+    @post_dump
+    def none_to_string(self, data, **kwargs):
+        for key, value in data.items():
+            data[key] = '' if value is None else value
+        return data
+
+    class Meta:
+        ordered = True
+
 
 class ServiceSchema(Schema):
     """
-    Schema for serializing 'service' POST (JSON).
+    Schema for serializing and deserializing 'service' POST (JSON).
     """
+    id = fields.Str(dump_only=True)
     name = fields.Str(required=True,
                       error_messages={'required': 'Name field is required'},
                       validate=Length(max=30))
     host = fields.Nested(HostSchema(),
                          error_messages={'required': 'Host field is required'},
                          required=True)
-    port = fields.Str(required=True,
-                      error_messages={'required': 'Port field is required'},
-                      validate=Length(max=8))
     proto = fields.Str(required=True,
                        error_messages={'required': 'Proto field is required'},
                        validate=OneOf(choices=['tcp', 'udp'],
                                       error='Not valid protocol. use tcp or udp'))
+    port = fields.Str(required=True,
+                      error_messages={'required': 'Port field is required'},
+                      validate=Length(max=8))
+    timestamps = fields.Nested(TimestampsSchema(),
+                               dump_only=True)
+    service_up = fields.Boolean(dump_only=True)
 
     @pre_load
     def validate_type(self, data, **kwargs):
-        if not isinstance(data, dict):
+        if not data or not isinstance(data, dict):
             raise ValidationError('Invalid input type.', 'services')
+        if 'host' in data.keys() and not isinstance(data.get('host'), dict):
+            raise ValidationError('Invalid input type', 'host')
         return data
 
     @validates('name')
@@ -76,9 +104,8 @@ class ServiceSchema(Schema):
         if port not in range(0, 65353):
             raise ValidationError('Not valid network port')
 
-    @post_load
-    def create_service(self, data, **kwargs):
-        return Service(**data).save()
+    class Meta:
+        ordered = True
 
 
 class GetServiceSchema(Schema):

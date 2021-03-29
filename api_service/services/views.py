@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, request, current_app
 from flask_restful import Resource, marshal_with, abort, url_for
 from bson import objectid
@@ -23,6 +25,7 @@ class ServicesApi(Resource):
             # Custom error output
             errors_custom = error_parser(error)
             abort(400, message=errors_custom , status=400)
+            # return {'message': errors_custom, 'status': 400}, 400
         page_limit_default = current_app.config.get('DEFAULT_PAGINATION_LIMIT')
         next_id = data_query_params.get('next', '')
         page_limit = data_query_params.get('limit', page_limit_default)
@@ -56,8 +59,9 @@ class ServicesApi(Resource):
         except ValidationError as error:
             # Custom error output
             errors_custom = error_parser(error)
-            abort(400, message=errors_custom, status=400)
-        return {'id': str(result.id)}, 201
+            return {'message': errors_custom, 'status': 400}, 400
+        service = Service(**result).save()
+        return {'id': str(service.id)}, 201
 
 
 class ServiceApi(Resource):
@@ -89,34 +93,38 @@ class ServiceApi(Resource):
     #         services_dummy_data.append(data)
     #         return {'service': data}, 201
 
-    # def patch(self, service_id):
-    #     self.check_id(service_id)
-    #     request_data = request.get_json()
-    #     if not request_data:
-    #         abort(400, message='No input data provided', status=400)
-    #     service = Service.objects(id=service_id).first()
-    #     if 'name' in request_data.keys() and request_data['name']:
-    #         service_name = request_data['name']
-    #         if Service.objects(name=service_name):
-    #             abort(404, message=f'Service with name {service_name} already exists', status=404)
-    #         service.name = service_name
-    #     if 'port' in request_data.keys():
-    #         pass
-    #     if 'proto' in request_data.keys():
-    #         pass
-    #     if 'host' in request_data.keys():
-    #         pass
-    #
-    #     schema = ServiceSchema()
-    #     errors = schema.validate(request_data)
-    #     if errors:
-    #         return errors
-    #     service = Service.objects(id=service_id).first()
+    def patch(self, service_id):
+        self.check_id(service_id)
+        service = Service.objects(id=service_id).first()
+        if not service:
+            abort(404, message=f'Service with id {service_id} doesn\'t exist', status=404)
+        schema = ServiceSchema()
+        request_data = request.get_json()
+        try:
+            result = schema.load(request_data, partial=('name', 'host', 'port', 'proto'))
+        except ValidationError as error:
+            # Custom error output
+            errors_custom = error_parser(error)
+            return {'message': errors_custom, 'status': 406}, 406
+        if result.get('name'):
+            service.name = result['name']
+        if result.get('host'):
+            if result['host']['type']:
+                service.host.type = result['host']['type']
+            if result['host']['value']:
+                service.host.value = result['host']['value']
+        if result.get('port'):
+            service.port = result['port']
+        if result.get('proto'):
+            service.proto = result['proto']
+        service.timestamps.edited = datetime.utcnow()
+        service.save()
+        dumped_service = schema.dump(service)
+        return {'service': dumped_service}, 200
 
     def delete(self, service_id):
         self.check_id(service_id)
-        self.check_service_exist(service_id)
-        service = Service.objects(id=service_id).find()
+        service = Service.objects(id=service_id).first()
         if not service:
             abort(404, message=f'Service with id {service_id} doesn\'t exist', status=404)
         service.delete()
