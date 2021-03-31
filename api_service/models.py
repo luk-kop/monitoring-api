@@ -19,40 +19,67 @@ class PaginationCursor:
     """
     Custom pagination for 'service' deserialization. Cursor pagination type with 'next' and 'limit' options.
     """
-    def __init__(self, iterable, next_id, page_limit):
+    def __init__(self, iterable, after_id, before_id, page_limit):
         self.iterable = iterable
-        self.next_id = next_id
+        self.after_id = after_id
+        self.before_id = before_id
         self.page_limit = page_limit
 
         if isinstance(iterable, QuerySet):
             self.total = iterable.count()
         else:
             self.total = len(iterable)
-        print(self.total)
 
-        if next_id:
-            # Get 'page_limit' documents from db with 'id' >= 'next_id'
-            self.items = iterable(id__gte=next_id).limit(page_limit)
+        if after_id:
+            # Get 'page_limit' documents from db with 'id' > 'after_id'
+            self.items = iterable(id__gt=after_id).limit(page_limit)
+        elif before_id:
+            # Get 'page_limit' documents from db with 'id' < 'before_id'
+            self.items = iterable(id__lt=before_id)
+            skip_count = self.items.count() - page_limit
+            if skip_count >= 0:
+                self.items = self.items.skip(skip_count)
+            # db.collection.find().skip(db.collection.count() - N)
         else:
             # Get the first 'page_limit' documents from db
             self.items = iterable().limit(page_limit)
         try:
-            self._last_item = self.items[len(self.items) - 1]
+            # '_last_item' necessary to determine the new 'after'
+            self._last_item = self.items[self.items_count - 1]
         except IndexError:
-            print('error')
             self._last_item = None
-        self._current_item = self.items.first()
+        try:
+            # '_first_item' necessary to determine the new 'before'
+            self._first_item = self.items.first()
+        except IndexError:
+            self._first_item = None
 
     @property
-    def next(self):
+    def after(self):
+        """
+        Returns 'after' cursor.
+        """
         if self._last_item:
-            return self.iterable(id__gt=self._last_item.id).first()
-        else:
-            return None
+            if self.items_count <= self.page_limit and len(self.iterable(id__gt=self._last_item.id)) > 0:
+                return self._last_item
+        return None
 
     @property
-    def current(self):
-        return self._current_item
+    def before(self):
+        """
+        Returns 'before' cursor.
+        """
+        if self._first_item:
+            if self.items_count <= self.page_limit and len(self.iterable(id__lt=self._first_item.id)) > 0:
+                return self._first_item
+        return None
+
+    @property
+    def items_count(self):
+        """
+        Returns number of items.
+        """
+        return len(self.items)
 
 
 class Host(db.EmbeddedDocument):
@@ -75,8 +102,11 @@ class Service(db.Document):
     service_up = db.BooleanField(required=True, default=False)
 
     @classmethod
-    def paginate_custom(cls, next_id, page_limit, **kwargs):
-        return PaginationCursor(cls.objects, next_id, page_limit)
+    def paginate_cursor(cls, after_id, before_id, page_limit, **kwargs):
+        """
+        Add cursor-based pagination to Service model.
+        """
+        return PaginationCursor(cls.objects, after_id, before_id, page_limit)
 
 
 

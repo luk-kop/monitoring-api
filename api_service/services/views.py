@@ -27,23 +27,35 @@ class ServicesApi(Resource):
             abort(400, message=errors_custom , status=400)
             # return {'message': errors_custom, 'status': 400}, 400
         page_limit_default = current_app.config.get('DEFAULT_PAGINATION_LIMIT')
-        next_id = data_query_params.get('next', '')
+        after_id = data_query_params.get('after', '')
+        before_id = data_query_params.get('before', '')
         page_limit = data_query_params.get('limit', page_limit_default)
         # Get services with custom pagination
-        services = Service.paginate_custom(next_id=next_id, page_limit=page_limit)
+        services = Service.paginate_cursor(after_id=after_id, before_id=before_id, page_limit=page_limit)
         # Get next page url
-        if services.next:
-            next_url = api.url_for(ServicesApi, limit=page_limit if page_limit else '', next=services.next.id, _external=True)
+        if services.after:
+            next_url = api.url_for(ServicesApi,
+                                   limit=page_limit if page_limit else '',
+                                   after=services.after.id,
+                                   _external=True)
         else:
             next_url = ''
+        if services.before:
+            prev_url = api.url_for(ServicesApi,
+                                   limit=page_limit if page_limit else '',
+                                   before=services.before.id,
+                                   _external=True)
+        else:
+            prev_url = ''
         # Get number of running services
         services_count_up = Service.objects(service_up=True).count()
         links = {
-            'next': next_url,
-            'self': request.url
+            'prev_url': prev_url,
+            'self_url': request.url,
+            'next_url': next_url,
         }
         dumped_services = {
-            '_links': links,
+            'links': links,
             'limit': page_limit,
             'services_total': services.total,
             'services_up': services_count_up,

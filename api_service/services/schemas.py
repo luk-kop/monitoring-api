@@ -112,21 +112,35 @@ class GetServiceSchema(Schema):
     """
     Schema for serializing 'service' query params.
     """
-    next = fields.Str()
+    after = fields.Str()
+    before = fields.Str()
     limit = fields.Integer()
 
-    @validates('next')
-    def validate_next(self, next_id):
-        if next_id and not objectid.ObjectId.is_valid(next_id):
+    @validates('after')
+    def validate_after(self, after_id):
+        if after_id and not objectid.ObjectId.is_valid(after_id):
             raise ValidationError('Not valid id')
-        if next_id and not Service.objects(id=next_id):
-            raise ValidationError(f'Service with id {next_id} doesn\'t exist')
+        if after_id and not Service.objects(id=after_id):
+            raise ValidationError(f'Service with id {after_id} does not exist')
+
+    @validates('before')
+    def validate_before(self, before_id):
+        if before_id and not objectid.ObjectId.is_valid(before_id):
+            raise ValidationError('Not valid id')
+        if before_id and not Service.objects(id=before_id):
+            raise ValidationError(f'Service with id {before_id} does not exist')
 
     @validates('limit')
     def validate_limit(self, limit):
         limit_max = current_app.config.get('MAX_PAGINATION_LIMIT')
         if limit not in range(1, limit_max + 1):
             raise ValidationError(f'Not valid limit (limit range 1-{limit_max})')
+
+    @pre_load
+    def validate_data(self, data, **kwargs):
+        if 'after' in data.keys() and 'before' in data.keys():
+            raise ValidationError('before and after cannot be used together', 'query_params')
+        return data
 
 
 def error_parser(error):

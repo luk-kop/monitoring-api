@@ -14,8 +14,9 @@ timestamps_field = {
 }
 
 links_field = {
-    'next': fields.String,
-    'self': fields.String
+    'prev_url': fields.String,
+    'self_url': fields.String,
+    'next_url': fields.String
 }
 
 service_fields = {
@@ -29,7 +30,7 @@ service_fields = {
 }
 
 services_fields = {
-    '_links': fields.Nested(links_field),
+    'links': fields.Nested(links_field),
     'limit': fields.Integer,
     'services_total': fields.Integer,
     'services_up': fields.Integer,
