@@ -8,9 +8,9 @@ from bson import objectid
 from api_service.models import Service
 
 
-class HostSchema(Schema):
+class ServiceHostSchema(Schema):
     """
-    Schema used as nested field in 'ServiceSchema'.
+    The schema used as nested field in 'ServiceSchema'.
     """
     type = fields.Str(required=True,
                       error_messages={'required': 'Host type field is required'},
@@ -21,7 +21,7 @@ class HostSchema(Schema):
                        validate=Length(max=30))
 
     @validates_schema
-    def validate_host(self, data, ** kwargs):
+    def validate_host(self, data, **kwargs):
         if data['type'] == 'hostname':
             pattern = r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*' \
                       r'([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$'
@@ -41,9 +41,9 @@ class HostSchema(Schema):
         ordered = True
 
 
-class TimestampsSchema(Schema):
+class ServiceTimestampsSchema(Schema):
     """
-    Schema used as nested field in 'ServiceSchema'.
+    The schema used as nested field in 'ServiceSchema'.
     """
     last_responded = fields.DateTime(dump_only=True)
     last_tested = fields.DateTime(dump_only=True)
@@ -62,13 +62,13 @@ class TimestampsSchema(Schema):
 
 class ServiceSchema(Schema):
     """
-    Schema for serializing and deserializing 'service' POST (JSON).
+    The schema for serializing and deserializing 'service' POST (JSON).
     """
     id = fields.Str(dump_only=True)
     name = fields.Str(required=True,
                       error_messages={'required': 'Name field is required'},
                       validate=Length(max=30))
-    host = fields.Nested(HostSchema(),
+    host = fields.Nested(ServiceHostSchema(),
                          error_messages={'required': 'Host field is required'},
                          required=True)
     proto = fields.Str(required=True,
@@ -78,7 +78,7 @@ class ServiceSchema(Schema):
     port = fields.Str(required=True,
                       error_messages={'required': 'Port field is required'},
                       validate=Length(max=8))
-    timestamps = fields.Nested(TimestampsSchema(),
+    timestamps = fields.Nested(ServiceTimestampsSchema(),
                                dump_only=True)
     service_up = fields.Boolean(dump_only=True)
 
@@ -108,9 +108,9 @@ class ServiceSchema(Schema):
         ordered = True
 
 
-class GetServiceSchema(Schema):
+class ServiceSchemaQueryParams(Schema):
     """
-    Schema for serializing 'service' query params.
+    The schema for deserializing 'service' query params.
     """
     after = fields.Str()
     before = fields.Str()
@@ -143,9 +143,70 @@ class GetServiceSchema(Schema):
         return data
 
 
+class PagingLinksSchema(Schema):
+    """
+    The schema perform the serialization of paginate URLs.
+    The schema is used as nested field in 'PagingSchema'.
+    """
+    previous = fields.Url(dump_only=True)
+    next = fields.Url(dump_only=True)
+
+    class Meta:
+        ordered = True
+
+
+class PagingCursorsSchema(Schema):
+    """
+    The schema perform the serialization of cursors data.
+    The schema used as nested field in 'PagingSchema'.
+    """
+    before = fields.Str(dump_only=True)
+    after = fields.Str(dump_only=True)
+
+    class Meta:
+        ordered = True
+
+
+class PagingSchema(Schema):
+    """
+    The schema perform the serialization of pagination data.
+    The schema used as nested field in 'ServicesSchema'.
+    """
+    limit = fields.Integer(dump_only=True)
+    cursors = fields.Nested(PagingCursorsSchema())
+    links = fields.Nested(PagingLinksSchema())
+
+    class Meta:
+        ordered = True
+
+
+class ServicesDataSchema(Schema):
+    """
+    The schema perform the serialization of services data.
+    The schema used as nested field in 'ServicesSchema'.
+    """
+    services_total = fields.Integer(dump_only=True)
+    services_up = fields.Integer(dump_only=True)
+    services = fields.List(fields.Nested(ServiceSchema))
+
+    class Meta:
+        ordered = True
+
+
+class ServicesSchema(Schema):
+    """
+    The schema for serializing 'services' and paging info.
+    """
+    paging = fields.Nested(PagingSchema())
+    data = fields.Nested(ServicesDataSchema)
+
+    class Meta:
+        ordered = True
+
+
 def error_parser(error):
     """
-    Custom error output
+    Custom error output.
     """
     errors_new = {}
     for field, value in error.messages.items():

@@ -1,30 +1,27 @@
 from datetime import datetime
 
 from flask import Blueprint, request, current_app
-from flask_restful import Resource, marshal_with, abort, url_for
+from flask_restful import Resource, abort
 from bson import objectid
 from marshmallow import ValidationError
 
 from api_service.extensions import api
 from api_service.models import Service
-from api_service.services.fields_custom import service_fields, services_fields
-from api_service.services.schemas import ServiceSchema, GetServiceSchema, error_parser
-
+from api_service.services.schemas import ServiceSchema, ServiceSchemaQueryParams, ServicesSchema, error_parser
 
 serv_bp = Blueprint('serv_bp', __name__)
 
 
 class ServicesApi(Resource):
-    @marshal_with(services_fields)
     def get(self):
         # Deserialize query params
-        schema = GetServiceSchema()
+        schema = ServiceSchemaQueryParams()
         try:
             data_query_params = schema.load(request.args)
         except ValidationError as error:
             # Custom error output
             errors_custom = error_parser(error)
-            abort(400, message=errors_custom , status=400)
+            abort(400, message=errors_custom, status=400)
             # return {'message': errors_custom, 'status': 400}, 400
         page_limit_default = current_app.config.get('DEFAULT_PAGINATION_LIMIT')
         after_id = data_query_params.get('after', '')
@@ -40,6 +37,7 @@ class ServicesApi(Resource):
                                    _external=True)
         else:
             next_url = ''
+        # Get prev page url
         if services.before:
             prev_url = api.url_for(ServicesApi,
                                    limit=page_limit if page_limit else '',
@@ -49,18 +47,31 @@ class ServicesApi(Resource):
             prev_url = ''
         # Get number of running services
         services_count_up = Service.objects(service_up=True).count()
-        links = {
-            'prev_url': prev_url,
-            'self_url': request.url,
-            'next_url': next_url,
-        }
-        dumped_services = {
-            'links': links,
+
+        # Prepare data to dump
+        paging = {
             'limit': page_limit,
+            'cursors': {
+                'before': str(services.before.id) if services.before else '',
+                'after': str(services.after.id) if services.after else ''
+            },
+            'links': {
+                'previous': prev_url,
+                'next': next_url
+            }
+        }
+        data = {
             'services_total': services.total,
             'services_up': services_count_up,
             'services': services.items,
         }
+        services_to_dump = {
+            'paging': paging,
+            'data': data
+        }
+        # Serialize services with paging info
+        schema = ServicesSchema()
+        dumped_services = schema.dump(services_to_dump)
         return dumped_services, 200
 
     def post(self):
@@ -85,13 +96,14 @@ class ServiceApi(Resource):
         if not objectid.ObjectId.is_valid(service_id):
             abort(400, message='Not valid id', status=400)
 
-    @marshal_with(service_fields, envelope='service')
     def get(self, service_id):
         self.check_id(service_id)
         service = Service.objects(id=service_id).first()
         if not service:
             abort(404, message=f'Service with id {service_id} doesn\'t exist', status=404)
-        return service, 200
+        schema = ServiceSchema()
+        dumped_service = schema.dump(service)
+        return {'service': dumped_service}, 200
 
     # def put(self, service_id):
     #     # TODO: change to: data = parser.parse_args()
@@ -141,6 +153,3 @@ class ServiceApi(Resource):
             abort(404, message=f'Service with id {service_id} doesn\'t exist', status=404)
         service.delete()
         return {'message': f'Service {service_id} deleted'}, 200
-
-
-
