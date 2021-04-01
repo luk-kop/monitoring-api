@@ -57,7 +57,7 @@ class PaginationCursor:
     @property
     def after(self):
         """
-        Returns 'after' cursor.
+        Returns 'after' cursor (starting page after this cursor).
         """
         if self._last_item:
             if self.items_count <= self.page_limit and len(self.iterable(id__gt=self._last_item.id)) > 0:
@@ -67,7 +67,7 @@ class PaginationCursor:
     @property
     def before(self):
         """
-        Returns 'before' cursor.
+        Returns 'before' cursor (starting page before this cursor).
         """
         if self._first_item:
             if self.items_count <= self.page_limit and len(self.iterable(id__lt=self._first_item.id)) > 0:
@@ -94,7 +94,7 @@ class Service(db.Document):
     """
     Model representing a 'service' document in MongoDB.
     """
-    name = db.StringField(max_length=30, required=True, unique=True)
+    name = db.StringField(max_length=40, required=True, unique=True)
     host = db.EmbeddedDocumentField(document_type=Host)
     port = db.StringField(max_length=8, required=True)
     proto = db.StringField(choices=('tcp', 'udp'), required=True)

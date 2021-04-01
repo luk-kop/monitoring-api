@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import uuid4
 
 from flask import Blueprint, request, current_app
 from flask_restful import Resource, abort
@@ -14,15 +15,21 @@ serv_bp = Blueprint('serv_bp', __name__)
 
 class ServicesApi(Resource):
     def get(self):
+        """
+        Retrieve paginated services and pagination info.
+        """
         # Deserialize query params
         schema = ServiceSchemaQueryParams()
-        try:
-            data_query_params = schema.load(request.args)
-        except ValidationError as error:
-            # Custom error output
-            errors_custom = error_parser(error)
-            abort(400, message=errors_custom, status=400)
-            # return {'message': errors_custom, 'status': 400}, 400
+        if request.args:
+            try:
+                data_query_params = schema.load(request.args)
+            except ValidationError as error:
+                # Custom error output
+                errors_custom = error_parser(error)
+                return {'message': errors_custom, 'status': 400}, 400
+        else:
+            data_query_params = {}
+        # Set query params
         page_limit_default = current_app.config.get('DEFAULT_PAGINATION_LIMIT')
         after_id = data_query_params.get('after', '')
         before_id = data_query_params.get('before', '')
@@ -75,6 +82,9 @@ class ServicesApi(Resource):
         return dumped_services, 200
 
     def post(self):
+        """
+        Add new service to db.
+        """
         schema = ServiceSchema()
         request_data = request.get_json()
         try:
@@ -84,48 +94,90 @@ class ServicesApi(Resource):
             errors_custom = error_parser(error)
             return {'message': errors_custom, 'status': 400}, 400
         service = Service(**result).save()
-        return {'id': str(service.id)}, 201
+        return {'id': str(service.id)}, 201, {'Location': f'{request.base_url}/{str(service.id)}'} # request.baseurl ???
+
+    def delete(self):
+        """
+        Delete all services from db.
+        """
+        Service.objects().all().delete()
+        return {'message': f'All services deleted'}, 200
 
 
 class ServiceApi(Resource):
     @staticmethod
     def check_id(service_id):
         """
-        Check whether id is 24-character hex string.
+        Check whether id is 24-character hex string (compliant with the MongoDB '_id' field).
         """
         if not objectid.ObjectId.is_valid(service_id):
             abort(400, message='Not valid id', status=400)
 
     def get(self, service_id):
+        """
+        Retrieve detailed information on the selected service.
+        """
         self.check_id(service_id)
         service = Service.objects(id=service_id).first()
         if not service:
-            abort(404, message=f'Service with id {service_id} doesn\'t exist', status=404)
+            abort(404, message=f'Service with id {service_id} does not exist', status=404)
         schema = ServiceSchema()
         dumped_service = schema.dump(service)
         return {'service': dumped_service}, 200
 
-    # def put(self, service_id):
-    #     # TODO: change to: data = parser.parse_args()
-    #     data = request.get_json()
-    #     service = next(filter(lambda x: x['id'] == service_id, services_dummy_data), None)
-    #     if service:
-    #         service.update(data)
-    #         return {'service': service}, 200
-    #     else:
-    #         data['id'] = service_id
-    #         services_dummy_data.append(data)
-    #         return {'service': data}, 201
-
-    def patch(self, service_id):
+    def put(self, service_id):
+        """
+        Replace the specified service (if it exists).
+        Full update to an existing resource.
+        """
         self.check_id(service_id)
         service = Service.objects(id=service_id).first()
         if not service:
-            abort(404, message=f'Service with id {service_id} doesn\'t exist', status=404)
+            abort(404, message=f'Service with id {service_id} does not exist', status=404)
+        request_data = request.get_json()
+        schema = ServiceSchema()
+        try:
+            if service.name == request_data.get('name'):
+                # Skip 'name' deserialization if same 'name' in request and db
+                del request_data['name']
+                result = schema.load(request_data, partial=('name',))
+                result['name'] = service.name
+            else:
+                result = schema.load(request_data)
+        except ValidationError as error:
+            # Custom error output
+            errors_custom = error_parser(error)
+            return {'message': errors_custom, 'status': 406}, 406
+        # Update MongoDB document
+        service.name = result['name']
+        service.host.type = result['host']['type']
+        service.host.value = result['host']['value']
+        service.proto = result['proto']
+        service.port = result['port']
+        service.timestamps.edited = datetime.utcnow()
+        service.save()
+        dumped_service = schema.dump(service)
+        return {'service': dumped_service}, 200
+
+    def patch(self, service_id):
+        """
+        Update selected details of specified service (if it exists).
+        Partial update to an existing resource.
+        """
+        self.check_id(service_id)
+        service = Service.objects(id=service_id).first()
+        if not service:
+            abort(404, message=f'Service with id {service_id} does not exist', status=404)
         schema = ServiceSchema()
         request_data = request.get_json()
         try:
-            result = schema.load(request_data, partial=('name', 'host', 'port', 'proto'))
+            if service.name == request_data.get('name'):
+                # If same 'name' in request and db - use a dummy name to omit same name and no data validation.
+                request_data['name'] = uuid4().hex
+                result = schema.load(request_data, partial=('name', 'host', 'port', 'proto'))
+                result['name'] = service.name
+            else:
+                result = schema.load(request_data, partial=('name', 'host', 'port', 'proto'))
         except ValidationError as error:
             # Custom error output
             errors_custom = error_parser(error)
@@ -147,9 +199,12 @@ class ServiceApi(Resource):
         return {'service': dumped_service}, 200
 
     def delete(self, service_id):
+        """
+        Delete the specified service (if it exists).
+        """
         self.check_id(service_id)
         service = Service.objects(id=service_id).first()
         if not service:
-            abort(404, message=f'Service with id {service_id} doesn\'t exist', status=404)
+            abort(404, message=f'Service with id {service_id} does not exist', status=404)
         service.delete()
         return {'message': f'Service {service_id} deleted'}, 200

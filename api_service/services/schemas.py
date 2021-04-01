@@ -67,7 +67,7 @@ class ServiceSchema(Schema):
     id = fields.Str(dump_only=True)
     name = fields.Str(required=True,
                       error_messages={'required': 'Name field is required'},
-                      validate=Length(max=30))
+                      validate=Length(max=40))
     host = fields.Nested(ServiceHostSchema(),
                          error_messages={'required': 'Host field is required'},
                          required=True)
@@ -119,16 +119,16 @@ class ServiceSchemaQueryParams(Schema):
     @validates('after')
     def validate_after(self, after_id):
         if after_id and not objectid.ObjectId.is_valid(after_id):
-            raise ValidationError('Not valid id')
+            raise ValidationError('Not valid cursor')
         if after_id and not Service.objects(id=after_id):
-            raise ValidationError(f'Service with id {after_id} does not exist')
+            raise ValidationError(f'Cursor with id {after_id} does not exist')
 
     @validates('before')
     def validate_before(self, before_id):
         if before_id and not objectid.ObjectId.is_valid(before_id):
-            raise ValidationError('Not valid id')
+            raise ValidationError('Not valid cursor')
         if before_id and not Service.objects(id=before_id):
-            raise ValidationError(f'Service with id {before_id} does not exist')
+            raise ValidationError(f'Cursor with id {before_id} does not exist')
 
     @validates('limit')
     def validate_limit(self, limit):
