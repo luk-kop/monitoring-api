@@ -22,4 +22,12 @@ class Config:
     # Default number of documents on page (api results pagination)
     DEFAULT_PAGINATION_LIMIT = 6
     MAX_PAGINATION_LIMIT = 30
+    # Flasgger Config
+    SWAGGER = {
+        'title': 'Monitoring API',
+        'description': 'test',
+        'version': '1.0.0',
+        'uiversion': 3,
+        # 'specs_route': "/docs/"
+    }
 

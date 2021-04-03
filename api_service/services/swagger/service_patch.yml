@@ -1,0 +1,108 @@
+Update an existing service's properties
+Update selected details of specified service (if it exists)
+---
+tags:
+  - Service
+parameters:
+  - name: service_id
+    in: path
+    type: string
+    required: true
+    description: 'The service id to update'
+  - name: body
+    in: body
+    description: 'The service data to be updated'
+    required: true
+    schema:
+      $ref: '#/definitions/ServicePatch'
+definitions:
+  Host:
+    type: object
+    properties:
+      type:
+        type: string
+        enum: [ 'hostname', 'ip' ]
+        example: 'ip'
+      value:
+        type: string
+        example: '192.168.1.10'
+  Timestamps:
+    type: object
+    properties:
+      last_responded:
+        type: string
+        format: date-time
+        example: ''
+      last_tested:
+        type: string
+        format: date-time
+      created:
+        type: string
+        format: date-time
+      edited:
+        type: string
+        format: date-time
+  Service:
+    type: object
+    properties:
+      id:
+        type: string
+        example: 606707904cbc3b192ef7c535
+      name:
+        type: string
+        example: 'home-ntp-service'
+      host:
+        $ref: '#/definitions/Host'
+      proto:
+        type: string
+        enum: ['tcp', 'udp']
+        example: 'udp'
+      port:
+        type: string
+        description: 'Service network port'
+        example: '123'
+      timestamps:
+          $ref: '#/definitions/Timestamps'
+      service_up:
+        type: boolean
+        example: false
+  ServicePatch:
+    type: object
+    properties:
+      name:
+        type: string
+        example: 'home-ntp-service'
+      host:
+        $ref: '#/definitions/Host'
+      proto:
+        type: string
+        enum: [ 'tcp', 'udp' ]
+        example: 'udp'
+      port:
+        type: string
+        description: 'Service network port'
+        example: '123'
+  Error:
+    type: object
+    properties:
+      message:
+        type: string
+      status:
+        type: integer
+    required:
+      - message
+      - status
+responses:
+  200:
+    description: 'The service successfully updated'
+    schema:
+      $ref: '#/definitions/Service'
+  404:
+    description: 'Not found'
+    schema:
+      $ref: '#/definitions/Error'
+  400:
+    description: 'Bad request'
+    schema:
+      $ref: '#/definitions/Error'
+

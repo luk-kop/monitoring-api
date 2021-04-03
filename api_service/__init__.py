@@ -1,7 +1,7 @@
 from flask import Flask
 
 from config import Config
-from api_service.extensions import api, db
+from api_service.extensions import api, db, swag
 from api_service.services import views as serv_views
 
 
@@ -26,6 +26,7 @@ def register_extensions(app):
     api.add_resource(serv_views.ServiceApi, '/services/<string:service_id>')
     api.init_app(app)
     db.init_app(app)
+    swag.init_app(app)
 
 
 def register_blueprints(app):

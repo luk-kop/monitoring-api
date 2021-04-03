@@ -1,7 +1,7 @@
 import re
 
 from flask import current_app
-from marshmallow import Schema, fields, post_load, post_dump, pre_load, validates, ValidationError, validates_schema
+from marshmallow import Schema, fields, post_dump, pre_load, validates, ValidationError, validates_schema
 from marshmallow.validate import OneOf, Length
 from bson import objectid
 

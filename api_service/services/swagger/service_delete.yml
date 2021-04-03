@@ -1,0 +1,40 @@
+Delete an existing service
+Delete the specified service (if it exists)
+---
+tags:
+  - Service
+parameters:
+  - name: service_id
+    in: path
+    type: string
+    required: true
+    description: 'The service id to delete'
+definitions:
+  Error:
+    type: object
+    properties:
+      message:
+        type: string
+      status:
+        type: integer
+    required:
+      - message
+      - status
+responses:
+  200:
+    description: 'The service successfully deleted'
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Service with id 606707904cbc3b192ef7c535 deleted'
+  404:
+    description: 'Not found'
+    schema:
+      $ref: '#/definitions/Error'
+  400:
+    description: 'Bad request'
+    schema:
+      $ref: '#/definitions/Error'
+

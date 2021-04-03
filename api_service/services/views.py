@@ -5,6 +5,7 @@ from flask import Blueprint, request, current_app
 from flask_restful import Resource, abort
 from bson import objectid
 from marshmallow import ValidationError
+from flasgger import swag_from
 
 from api_service.extensions import api
 from api_service.models import Service
@@ -111,43 +112,51 @@ class ServiceApi(Resource):
         Check whether id is 24-character hex string (compliant with the MongoDB '_id' field).
         """
         if not objectid.ObjectId.is_valid(service_id):
-            abort(400, message='Not valid id', status=400)
+            abort(400, message='The specified service id is invalid', status=400)
 
+    @staticmethod
+    def check_service_exist(service_id):
+        """
+        Check whether service with specified id exists.
+        """
+        service = Service.objects(id=service_id).first()
+        if not service:
+            abort(404, message=f'Service with id {service_id} does not exist', status=404)
+        return service
+
+    @swag_from("swagger/service_get.yml")
     def get(self, service_id):
         """
         Retrieve detailed information on the selected service.
         """
         self.check_id(service_id)
-        service = Service.objects(id=service_id).first()
-        if not service:
-            abort(404, message=f'Service with id {service_id} does not exist', status=404)
+        service = self.check_service_exist(service_id)
         schema = ServiceSchema()
         dumped_service = schema.dump(service)
         return {'service': dumped_service}, 200
 
+    @swag_from("swagger/service_put.yml")
     def put(self, service_id):
         """
         Replace the specified service (if it exists).
         Full update to an existing resource.
         """
         self.check_id(service_id)
-        service = Service.objects(id=service_id).first()
-        if not service:
-            abort(404, message=f'Service with id {service_id} does not exist', status=404)
+        service = self.check_service_exist(service_id)
         request_data = request.get_json()
         schema = ServiceSchema()
         try:
             if service.name == request_data.get('name'):
-                # Skip 'name' deserialization if same 'name' in request and db
-                del request_data['name']
-                result = schema.load(request_data, partial=('name',))
+                # If same 'name' in request and db - use a dummy name to omit same name and no data validation.
+                request_data['name'] = uuid4().hex
+                result = schema.load(request_data)
                 result['name'] = service.name
             else:
                 result = schema.load(request_data)
         except ValidationError as error:
             # Custom error output
             errors_custom = error_parser(error)
-            return {'message': errors_custom, 'status': 406}, 406
+            return {'message': errors_custom, 'status': 400}, 400
         # Update MongoDB document
         service.name = result['name']
         service.host.type = result['host']['type']
@@ -159,15 +168,14 @@ class ServiceApi(Resource):
         dumped_service = schema.dump(service)
         return {'service': dumped_service}, 200
 
+    @swag_from("swagger/service_patch.yml")
     def patch(self, service_id):
         """
         Update selected details of specified service (if it exists).
         Partial update to an existing resource.
         """
         self.check_id(service_id)
-        service = Service.objects(id=service_id).first()
-        if not service:
-            abort(404, message=f'Service with id {service_id} does not exist', status=404)
+        service = self.check_service_exist(service_id)
         schema = ServiceSchema()
         request_data = request.get_json()
         try:
@@ -181,7 +189,7 @@ class ServiceApi(Resource):
         except ValidationError as error:
             # Custom error output
             errors_custom = error_parser(error)
-            return {'message': errors_custom, 'status': 406}, 406
+            return {'message': errors_custom, 'status': 400}, 400
         if result.get('name'):
             service.name = result['name']
         if result.get('host'):
@@ -198,13 +206,12 @@ class ServiceApi(Resource):
         dumped_service = schema.dump(service)
         return {'service': dumped_service}, 200
 
+    @swag_from("swagger/service_delete.yml")
     def delete(self, service_id):
         """
         Delete the specified service (if it exists).
         """
         self.check_id(service_id)
-        service = Service.objects(id=service_id).first()
-        if not service:
-            abort(404, message=f'Service with id {service_id} does not exist', status=404)
+        service = self.check_service_exist(service_id)
         service.delete()
-        return {'message': f'Service {service_id} deleted'}, 200
+        return {'message': f'Service with id {service_id} deleted'}, 200
