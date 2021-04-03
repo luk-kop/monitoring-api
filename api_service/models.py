@@ -19,11 +19,12 @@ class PaginationCursor:
     """
     Custom pagination for 'service' deserialization. Cursor pagination type with 'next' and 'limit' options.
     """
-    def __init__(self, iterable, after_id, before_id, page_limit):
+    def __init__(self, iterable, after_id, before_id, page_limit, sort_by):
         self.iterable = iterable
         self.after_id = after_id
         self.before_id = before_id
         self.page_limit = page_limit
+        self.sort_by = sort_by
 
         if isinstance(iterable, QuerySet):
             self.total = iterable.count()
@@ -31,18 +32,29 @@ class PaginationCursor:
             self.total = len(iterable)
 
         if after_id:
-            # Get 'page_limit' documents from db with 'id' > 'after_id'
-            self.items = iterable(id__gt=after_id).limit(page_limit)
+            if self.sort_by == 'name':
+                service = iterable(id=after_id).first()
+                self.items = iterable(name__gt=service.name).limit(page_limit)
+            else:
+                # Get 'page_limit' documents from db with 'id' > 'after_id'
+                self.items = iterable(id__gt=after_id).limit(page_limit)
         elif before_id:
-            # Get 'page_limit' documents from db with 'id' < 'before_id'
-            self.items = iterable(id__lt=before_id)
+            if self.sort_by == 'name':
+                service = iterable(id=before_id).first()
+                self.items = iterable(name__lt=service.name).limit(page_limit)
+            else:
+                # Get 'page_limit' documents from db with 'id' < 'before_id'
+                self.items = iterable(id__lt=before_id)
             skip_count = self.items.count() - page_limit
             if skip_count >= 0:
                 self.items = self.items.skip(skip_count)
             # db.collection.find().skip(db.collection.count() - N)
         else:
-            # Get the first 'page_limit' documents from db
-            self.items = iterable().limit(page_limit)
+            if self.sort_by == 'name':
+                self.items = iterable.order_by('name').limit(page_limit)
+            else:
+                # Get the first 'page_limit' documents from db
+                self.items = iterable().limit(page_limit)
         try:
             # '_last_item' necessary to determine the new 'after'
             self._last_item = self.items[self.items_count - 1]
@@ -60,8 +72,12 @@ class PaginationCursor:
         Returns 'after' cursor (starting next page after this cursor).
         """
         if self._last_item:
-            if self.items_count <= self.page_limit and len(self.iterable(id__gt=self._last_item.id)) > 0:
-                return self._last_item
+            if self.sort_by == 'name':
+                if self.items_count <= self.page_limit and len(self.iterable(name__gt=self._last_item.name)) > 0:
+                    return self._last_item
+            else:
+                if self.items_count <= self.page_limit and len(self.iterable(id__gt=self._last_item.id)) > 0:
+                    return self._last_item
         return None
 
     @property
@@ -70,8 +86,12 @@ class PaginationCursor:
         Returns 'before' cursor (starting previous page before this cursor).
         """
         if self._first_item:
-            if self.items_count <= self.page_limit and len(self.iterable(id__lt=self._first_item.id)) > 0:
-                return self._first_item
+            if self.sort_by == 'name':
+                if self.items_count <= self.page_limit and len(self.iterable(name__lt=self._first_item.name)) > 0:
+                    return self._first_item
+            else:
+                if self.items_count <= self.page_limit and len(self.iterable(id__lt=self._first_item.id)) > 0:
+                    return self._first_item
         return None
 
     @property
@@ -102,11 +122,11 @@ class Service(db.Document):
     service_up = db.BooleanField(required=True, default=False)
 
     @classmethod
-    def paginate_cursor(cls, after_id, before_id, page_limit, **kwargs):
+    def paginate_cursor(cls, after_id, before_id, page_limit, sort_by, **kwargs):
         """
         Add cursor-based pagination to Service model.
         """
-        return PaginationCursor(cls.objects, after_id, before_id, page_limit)
+        return PaginationCursor(cls.objects, after_id, before_id, page_limit, sort_by)
 
 
 

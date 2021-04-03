@@ -4,6 +4,14 @@ Returns information about all services (result can be paginated if required)
 tags:
   - Services
 parameters:
+  - name: sort
+    in: query
+    type: string
+    description: >
+      If present, the services are sorted by `name` (in ascending order).
+      By default services are sorted by service `id`.
+    enum:
+      - name
   - name: after
     in: query
     type: string

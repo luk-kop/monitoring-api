@@ -74,7 +74,7 @@ class ServiceSchema(Schema):
     proto = fields.Str(required=True,
                        error_messages={'required': 'Proto field is required'},
                        validate=OneOf(choices=['tcp', 'udp'],
-                                      error='Not valid protocol. use tcp or udp'))
+                                      error='Not valid protocol. Use tcp or udp'))
     port = fields.Str(required=True,
                       error_messages={'required': 'Port field is required'},
                       validate=Length(max=8))
@@ -115,6 +115,7 @@ class ServiceSchemaQueryParams(Schema):
     after = fields.Str()
     before = fields.Str()
     limit = fields.Integer()
+    sort=fields.Str()
 
     @validates('after')
     def validate_after(self, after_id):
@@ -135,6 +136,12 @@ class ServiceSchemaQueryParams(Schema):
         limit_max = current_app.config.get('MAX_PAGINATION_LIMIT')
         if limit not in range(1, limit_max + 1):
             raise ValidationError(f'Not valid limit (limit range 1-{limit_max})')
+
+    @validates('sort')
+    def validate_sort(self, value):
+        print(value)
+        if value and not value == 'name':
+            raise ValidationError('Not valid sort value. Use value name.')
 
     @pre_load
     def validate_data(self, data, **kwargs):

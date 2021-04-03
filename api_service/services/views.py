@@ -36,22 +36,25 @@ class ServicesApi(Resource):
         after_id = data_query_params.get('after', '')
         before_id = data_query_params.get('before', '')
         page_limit = data_query_params.get('limit', page_limit_default)
+        sort_by = data_query_params.get('sort', '')
         # Get services with custom pagination
-        services = Service.paginate_cursor(after_id=after_id, before_id=before_id, page_limit=page_limit)
+        services = Service.paginate_cursor(after_id=after_id,
+                                           before_id=before_id,
+                                           page_limit=page_limit,
+                                           sort_by= sort_by)
         # Get next page url
-        if services.after:
-            next_url = api.url_for(ServicesApi,
-                                   limit=page_limit if page_limit else '',
-                                   after=services.after.id,
-                                   _external=True)
+        if services.after and sort_by:
+            next_url = api.url_for(ServicesApi, sort=sort_by, limit=page_limit, after=services.after.id, _external=True)
+        elif services.after:
+            next_url = api.url_for(ServicesApi, limit=page_limit, after=services.after.id, _external=True)
         else:
             next_url = ''
         # Get prev page url
-        if services.before:
-            prev_url = api.url_for(ServicesApi,
-                                   limit=page_limit if page_limit else '',
-                                   before=services.before.id,
+        if services.before and sort_by:
+            prev_url = api.url_for(ServicesApi, sort=sort_by, limit=page_limit, before=services.before.id,
                                    _external=True)
+        elif services.before:
+            prev_url = api.url_for(ServicesApi, limit=page_limit, before=services.before.id, _external=True)
         else:
             prev_url = ''
         # Get number of running services
