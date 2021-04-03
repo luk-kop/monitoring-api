@@ -15,6 +15,7 @@ serv_bp = Blueprint('serv_bp', __name__)
 
 
 class ServicesApi(Resource):
+    @swag_from("swagger/services_get.yml")
     def get(self):
         """
         Retrieve paginated services and pagination info.
@@ -82,6 +83,7 @@ class ServicesApi(Resource):
         dumped_services = schema.dump(services_to_dump)
         return dumped_services, 200
 
+    @swag_from("swagger/services_post.yml")
     def post(self):
         """
         Add new service to db.
@@ -97,12 +99,13 @@ class ServicesApi(Resource):
         service = Service(**result).save()
         return {'id': str(service.id)}, 201, {'Location': f'{request.base_url}/{str(service.id)}'} # request.baseurl ???
 
+    @swag_from("swagger/services_delete.yml")
     def delete(self):
         """
         Delete all services from db.
         """
         Service.objects().all().delete()
-        return {'message': f'All services deleted'}, 200
+        return {'message': 'All services deleted'}, 200
 
 
 class ServiceApi(Resource):

@@ -57,7 +57,7 @@ class PaginationCursor:
     @property
     def after(self):
         """
-        Returns 'after' cursor (starting page after this cursor).
+        Returns 'after' cursor (starting next page after this cursor).
         """
         if self._last_item:
             if self.items_count <= self.page_limit and len(self.iterable(id__gt=self._last_item.id)) > 0:
@@ -67,7 +67,7 @@ class PaginationCursor:
     @property
     def before(self):
         """
-        Returns 'before' cursor (starting page before this cursor).
+        Returns 'before' cursor (starting previous page before this cursor).
         """
         if self._first_item:
             if self.items_count <= self.page_limit and len(self.iterable(id__lt=self._first_item.id)) > 0:

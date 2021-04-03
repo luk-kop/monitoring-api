@@ -1,23 +1,17 @@
-Deletes an existing service by id
-Deletes the specified service (if it exists)
+Deletes all services
+Deletes all services definitively (cannot be restored)
 ---
 tags:
-  - Service
-parameters:
-  - name: service_id
-    in: path
-    type: string
-    required: true
-    description: 'The service `id` to delete'
+  - Services
 responses:
-  200:
-    description: 'The service successfully deleted'
+  201:
+    description: 'All services successfully deleted'
     schema:
       type: object
       properties:
         message:
           type: string
-          example: 'Service with id 606707904cbc3b192ef7c535 deleted'
+          example: 'All services deleted'
   404:
     description: 'Not found'
     schema:
@@ -44,5 +38,3 @@ responses:
       required:
         - message
         - status
-
-

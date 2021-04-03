@@ -1,5 +1,5 @@
-Find a specific service
-Returns detailed information regarding the single service
+Lists all services
+Returns information about all services (result can be paginated if required)
 ---
 tags:
   - Services
@@ -7,14 +7,20 @@ parameters:
   - name: after
     in: query
     type: string
-    description: 'After cursor (starting page after this cursor)'
+    description: >
+      The cursor for next page (last service `id` on current page).
+      Cannot be used together with `before`.
   - name: before
     in: query
     type: string
-    description: 'Before cursor (starting page before this cursor)'
+    description: >
+      The cursor for prev page (first service `id` on current page).
+      Cannot be used together with `after`.
   - name: limit
     in: query
     type: integer
+    minimum: 1
+    maximum: 30
     description: 'Number of services per page'
 definitions:
   Services:
@@ -25,35 +31,75 @@ definitions:
         properties:
           limit:
             type: integer
-            default:
+            default: 6
+            minimum: 1
+            maximum: 30
+            example: 2
+            description: 'Number of services per page'
+          cursors:
+            type: object
+            properties:
+              before:
+                type: string
+                example: '6068362a32d7ded4a71bd43f'
+                description: 'Before cursor (starting previous page before this cursor)'
+              after:
+                type: string
+                example: '6068362a32d7ded4a71bd440'
+                description: 'After cursor (starting next page after this cursor)'
+          links:
+            type: object
+            properties:
+              previous:
+                type: string
+                format: uri
+                example: 'https://example.com/services?limit=2&before=6068362a32d7ded4a71bd43f'
+              next:
+                type: string
+                format: uri
+                example: 'https://example.com/services?limit=2&after=6068362a32d7ded4a71bd440'
       data:
         type: object
-  Host:
-    type: object
-    properties:
-      type:
-        type: string
-        enum: [ 'hostname', 'ip' ]
-        example: 'ip'
-      value:
-        type: string
-        example: 192.168.1.10
-  Timestamps:
-    type: object
-    properties:
-      last_responded:
-        type: string
-        format: date-time
-        example: ''
-      last_tested:
-        type: string
-        format: date-time
-      created:
-        type: string
-        format: date-time
-      edited:
-        type: string
-        format: date-time
+        properties:
+          services_total:
+            type: integer
+            minimum: 0
+            example: 5
+          services_up:
+            type: integer
+            minimum: 0
+            example: 2
+          services:
+            type: array
+            items:
+              $ref: '#/definitions/Service'
+            example:
+              - id: '6068362a32d7ded4a71bd43f'
+                name: "home-ntp-service"
+                port: "123"
+                proto: "udp"
+                service_up: true
+                host:
+                  type: "ip"
+                  value: "192.168.1.10"
+                timestamps:
+                  created: "2021-03-03T09:44:39.842Z"
+                  edited: "2021-03-26T11:40:39.123Z"
+                  last_responded: "2021-04-03T09:44:39.842Z"
+                  last_tested: "2021-04-03T09:44:39.842Z"
+              - id: '6068362a32d7ded4a71bd440'
+                name: "home-dns-service"
+                port: "53"
+                proto: "udp"
+                service_up: false
+                host:
+                  type: "hostname"
+                  value: "ns1.example.com"
+                timestamps:
+                  created: "2021-04-01T09:44:39.842Z"
+                  edited: "2021-04-01T09:44:39.842Z"
+                  last_responded: ""
+                  last_tested: ""
   Service:
     type: object
     properties:
@@ -64,7 +110,15 @@ definitions:
         type: string
         example: 'home-ntp-service'
       host:
-        $ref: '#/definitions/Host'
+        type: object
+        properties:
+          type:
+            type: string
+            enum: [ 'hostname', 'ip' ]
+            example: 'ip'
+          value:
+            type: string
+            example: 192.168.1.10
       proto:
         type: string
         enum: ['tcp', 'udp']
@@ -74,20 +128,24 @@ definitions:
         description: Service network port
         example: '123'
       timestamps:
-          $ref: '#/definitions/Timestamps'
+        type: object
+        properties:
+          last_responded:
+            type: string
+            format: date-time
+            example: ''
+          last_tested:
+            type: string
+            format: date-time
+          created:
+            type: string
+            format: date-time
+          edited:
+            type: string
+            format: date-time
       service_up:
         type: boolean
         example: false
-  Error:
-    type: object
-    properties:
-      message:
-        type: string
-      status:
-        type: integer
-    required:
-      - message
-      - status
 responses:
   200:
     description: 'Details of the selected service'
@@ -96,8 +154,26 @@ responses:
   404:
     description: 'Not found'
     schema:
-      $ref: '#/definitions/Error'
+      type: object
+      properties:
+        message:
+          type: string
+        status:
+          type: integer
+          example: 404
+      required:
+        - message
+        - status
   400:
     description: 'Bad request'
     schema:
-      $ref: '#/definitions/Error'
+      type: object
+      properties:
+        message:
+          type: string
+        status:
+          type: integer
+          example: 400
+      required:
+        - message
+        - status

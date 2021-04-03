@@ -25,9 +25,13 @@ class Config:
     # Flasgger Config
     SWAGGER = {
         'title': 'Monitoring API',
-        'description': 'test',
+        'description': '### A simple REST API to monitor the availability of selected services. '
+                       'The application checks at regular intervals the availability of services on the '
+                       'specified ip address (or hostname) and port',
         'version': '1.0.0',
         'uiversion': 3,
-        # 'specs_route': "/docs/"
+        'termsOfService': '',
+        # 'specs_route': '/apidocs/'
+
     }
 
