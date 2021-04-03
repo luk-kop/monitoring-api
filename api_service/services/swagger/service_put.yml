@@ -14,7 +14,34 @@ parameters:
     description: 'The service data to be updated'
     required: true
     schema:
-      $ref: '#/definitions/ServicePut'
+      type: object
+      properties:
+        name:
+          type: string
+          example: 'home-ntp-service'
+        host:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [ 'hostname', 'ip' ]
+              example: 'ip'
+            value:
+              type: string
+              example: '192.168.1.10'
+        proto:
+          type: string
+          enum: [ 'tcp', 'udp' ]
+          example: 'udp'
+        port:
+          type: string
+          description: 'Service network port'
+          example: '123'
+      required:
+        - name
+        - host
+        - proto
+        - port
 definitions:
   Service:
     type: object
@@ -62,35 +89,6 @@ definitions:
       service_up:
         type: boolean
         example: false
-  ServicePut:
-    type: object
-    properties:
-      name:
-        type: string
-        example: 'home-ntp-service'
-      host:
-        type: object
-        properties:
-          type:
-            type: string
-            enum: [ 'hostname', 'ip' ]
-            example: 'ip'
-          value:
-            type: string
-            example: '192.168.1.10'
-      proto:
-        type: string
-        enum: [ 'tcp', 'udp' ]
-        example: 'udp'
-      port:
-        type: string
-        description: 'Service network port'
-        example: '123'
-    required:
-      - name
-      - host
-      - proto
-      - port
 responses:
   200:
     description: 'The service successfully updated'
