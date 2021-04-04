@@ -8,10 +8,13 @@ parameters:
     in: query
     type: string
     description: >
-      If present, the services are sorted by `name` (in ascending order).
-      By default services are sorted by service `id`.
+      If present, the services are sorted in ascending order (by `name` or `id`) or descending order (by `-name` or `-id`).
+      If the `sort` query param is not set, the services are sorted by service `id` (in ascending order).
     enum:
       - name
+      - -name
+      - id
+      - -id
   - name: after
     in: query
     type: string

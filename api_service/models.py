@@ -26,52 +26,86 @@ class PaginationCursor:
         self.before_id = before_id
         self.page_limit = page_limit
         if sort_by:
-            self.sort_by = sort_by
+            if sort_by[0] == '-':
+                self.sort_dir = 'descending'
+                self.sort_by = sort_by[1:]
+            else:
+                self.sort_dir = 'ascending'
+                self.sort_by = sort_by
         else:
+            # Default sorting
             self.sort_by = 'id'
+            self.sort_dir = 'ascending'
 
         if isinstance(iterable, QuerySet):
             self.total = iterable.count()
         else:
             self.total = len(iterable)
         if after_id:
+            # Execute if 'after' query param is present in URL
             model = iterable(id=after_id).first()
-            items_kwargs = {
-                f'{self.sort_by}__gt': getattr(model, f'{self.sort_by}')
-            }
-            self.items = iterable(**items_kwargs).limit(page_limit)
+            # Calculate the next page of items (page after model with 'after_id' id)
+            if self.sort_dir == 'ascending':
+                items_kwargs = {
+                    f'{self.sort_by}__gt': getattr(model, f'{self.sort_by}')
+                }
+                self.items = iterable(**items_kwargs).limit(page_limit)
+            else:
+                items_kwargs = {
+                    f'{self.sort_by}__lt': getattr(model, f'{self.sort_by}')
+                }
+                self.items = iterable(**items_kwargs).order_by(f'-{self.sort_by}').limit(page_limit)
         elif before_id:
+            # Execute if 'before' query param is present in URL
             model = iterable(id=before_id).first()
-            items_kwargs = {
-                f'{self.sort_by}__lt': getattr(model, f'{self.sort_by}')
-            }
-            self.items = iterable(**items_kwargs).limit(page_limit)
-
+            # Calculate the prev page of items (page before model with 'after_id' id)
+            if self.sort_dir == 'ascending':
+                items_kwargs = {
+                    f'{self.sort_by}__lt': getattr(model, f'{self.sort_by}')
+                }
+                self.items = iterable(**items_kwargs).limit(page_limit)
+            else:
+                items_kwargs = {
+                    f'{self.sort_by}__gt': getattr(model, f'{self.sort_by}')
+                }
+                self.items = iterable(**items_kwargs).order_by(f'-{self.sort_by}').limit(page_limit)
             skip_count = self.items.count() - page_limit
             if skip_count >= 0:
                 self.items = self.items.skip(skip_count)
         else:
-            self.items = iterable.order_by(self.sort_by).limit(page_limit)
+            # Execute if neither 'before' nor 'after' query params are present in URL
+            if self.sort_dir == 'ascending':
+                self.items = iterable.order_by(self.sort_by).limit(page_limit)
+            else:
+                self.items = iterable.order_by(f'-{self.sort_by}').limit(page_limit)
         try:
-            # '_last_item' necessary to determine the new 'after'
+            # '_last_item' on the page - necessary to determine the new 'after'
             self._last_item = self.items[self.items_count - 1]
             # Check whether there are any objects in db behind '_last_item'
-            items_kwargs = {
-                f'{self.sort_by}__gt': getattr(self._last_item, f'{self.sort_by}')
-            }
+            if self.sort_dir == 'ascending':
+                items_kwargs = {
+                    f'{self.sort_by}__gt': getattr(self._last_item, f'{self.sort_by}')
+                }
+            else:
+                items_kwargs = {
+                    f'{self.sort_by}__lt': getattr(self._last_item, f'{self.sort_by}')
+                }
             self._items_count_after_last_item = len(self.iterable(**items_kwargs))
         except IndexError:
             self._last_item = None
-        try:
-            # '_first_item' necessary to determine the new 'before'
-            self._first_item = self.items.first()
+        # '_first_item' on the page - necessary to determine the new 'before'
+        self._first_item = self.items.first()
+        if self._first_item:
             # Check whether there are any objects in db before '_firs_item'
-            items_kwargs = {
-                f'{self.sort_by}__lt': getattr(self._first_item, f'{self.sort_by}')
-            }
+            if self.sort_dir == 'ascending':
+                items_kwargs = {
+                    f'{self.sort_by}__lt': getattr(self._first_item, f'{self.sort_by}')
+                }
+            else:
+                items_kwargs = {
+                    f'{self.sort_by}__gt': getattr(self._first_item, f'{self.sort_by}')
+                }
             self._items_count_before_first_item = len(self.iterable(**items_kwargs))
-        except IndexError:
-            self._first_item = None
 
     @property
     def after(self):

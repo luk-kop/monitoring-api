@@ -139,8 +139,9 @@ class ServiceSchemaQueryParams(Schema):
 
     @validates('sort')
     def validate_sort(self, value):
-        if not value or not value == 'name':
-            raise ValidationError('Not valid sort value. Use name.')
+        print(value)
+        if not value or value not in ['name', '-name', 'id', '-id']:
+            raise ValidationError('Not valid sort value. Use one of the following values: name, -name, id or -id.')
 
     @pre_load
     def validate_data(self, data, **kwargs):
