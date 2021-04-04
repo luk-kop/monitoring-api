@@ -13,11 +13,11 @@ class ServiceHostSchema(Schema):
     The schema used as nested field in 'ServiceSchema'.
     """
     type = fields.Str(required=True,
-                      error_messages={'required': 'Host type field is required'},
+                      error_messages={'required': 'Host type field is required.'},
                       validate=OneOf(choices=['hostname', 'ip'],
-                                     error='Not valid host type (use ip or hostname)'))
+                                     error='Not valid host type (use ip or hostname).'))
     value = fields.Str(required=True,
-                       error_messages={'required': 'Host value field is required'},
+                       error_messages={'required': 'Host value field is required.'},
                        validate=Length(max=30))
 
     @validates_schema
@@ -27,7 +27,7 @@ class ServiceHostSchema(Schema):
                       r'([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$'
             mo = re.match(pattern, data['value'])
             if not mo:
-                raise ValidationError({'value': ['Not valid hostname']})
+                raise ValidationError({'value': ['Not valid hostname.']})
         else:
             # Regex matches only unicast IP addresses from range 0.0.0.0 - 223.255.255.255
             pattern = r'^((22[0-3]\.|2[0-1][0-9]\.|[0-1][0-9]{2}\.|[0-9]{1,2}\.)' \
@@ -35,7 +35,7 @@ class ServiceHostSchema(Schema):
                       r'(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[0-9]{1,2}))$'
             mo = re.match(pattern, data['value'])
             if not mo:
-                raise ValidationError({'value': ['Not valid ip address']})
+                raise ValidationError({'value': ['Not valid ip address.']})
 
     class Meta:
         ordered = True
@@ -66,17 +66,17 @@ class ServiceSchema(Schema):
     """
     id = fields.Str(dump_only=True)
     name = fields.Str(required=True,
-                      error_messages={'required': 'Name field is required'},
+                      error_messages={'required': 'Name field is required.'},
                       validate=Length(max=40))
     host = fields.Nested(ServiceHostSchema(),
-                         error_messages={'required': 'Host field is required'},
+                         error_messages={'required': 'Host field is required.'},
                          required=True)
     proto = fields.Str(required=True,
-                       error_messages={'required': 'Proto field is required'},
+                       error_messages={'required': 'Proto field is required.'},
                        validate=OneOf(choices=['tcp', 'udp'],
-                                      error='Not valid protocol. Use tcp or udp'))
+                                      error='Not valid protocol. Use tcp or udp.'))
     port = fields.Str(required=True,
-                      error_messages={'required': 'Port field is required'},
+                      error_messages={'required': 'Port field is required.'},
                       validate=Length(max=8))
     timestamps = fields.Nested(ServiceTimestampsSchema(),
                                dump_only=True)
@@ -87,22 +87,22 @@ class ServiceSchema(Schema):
         if not data or not isinstance(data, dict):
             raise ValidationError('Invalid input type.', 'services')
         if 'host' in data.keys() and not isinstance(data.get('host'), dict):
-            raise ValidationError('Invalid input type', 'host')
+            raise ValidationError('Invalid input type.', 'host')
         return data
 
     @validates('name')
     def validate_name(self, name):
         if Service.objects(name=name):
-            raise ValidationError(f'Service {name} already exists, please use a different name')
+            raise ValidationError(f'Service {name} already exists, please use a different name.')
 
     @validates('port')
     def validate_port(self, port):
         try:
             port = int(port)
         except ValueError:
-            raise ValidationError('Not valid network port')
+            raise ValidationError('Not valid network port.')
         if port not in range(0, 65353):
-            raise ValidationError('Not valid network port')
+            raise ValidationError('Not valid network port.')
 
     class Meta:
         ordered = True
@@ -119,34 +119,33 @@ class ServiceSchemaQueryParams(Schema):
 
     @validates('after')
     def validate_after(self, after_id):
-        if after_id and not objectid.ObjectId.is_valid(after_id):
+        if not after_id or not objectid.ObjectId.is_valid(after_id):
             raise ValidationError('Not valid cursor')
-        if after_id and not Service.objects(id=after_id):
-            raise ValidationError(f'Cursor with id {after_id} does not exist')
+        if not Service.objects(id=after_id):
+            raise ValidationError(f'Cursor with id {after_id} does not exist.')
 
     @validates('before')
     def validate_before(self, before_id):
-        if before_id and not objectid.ObjectId.is_valid(before_id):
-            raise ValidationError('Not valid cursor')
-        if before_id and not Service.objects(id=before_id):
-            raise ValidationError(f'Cursor with id {before_id} does not exist')
+        if not before_id or not objectid.ObjectId.is_valid(before_id):
+            raise ValidationError('Not valid cursor.')
+        if not Service.objects(id=before_id):
+            raise ValidationError(f'Cursor with id {before_id} does not exist.')
 
     @validates('limit')
     def validate_limit(self, limit):
         limit_max = current_app.config.get('MAX_PAGINATION_LIMIT')
         if limit not in range(1, limit_max + 1):
-            raise ValidationError(f'Not valid limit (limit range 1-{limit_max})')
+            raise ValidationError(f'Not valid limit (limit range 1-{limit_max}).')
 
     @validates('sort')
     def validate_sort(self, value):
-        print(value)
-        if value and not value == 'name':
-            raise ValidationError('Not valid sort value. Use value name.')
+        if not value or not value == 'name':
+            raise ValidationError('Not valid sort value. Use name.')
 
     @pre_load
     def validate_data(self, data, **kwargs):
         if 'after' in data.keys() and 'before' in data.keys():
-            raise ValidationError('before and after cannot be used together', 'query_params')
+            raise ValidationError('before and after cannot be used together', 'query_params.')
         return data
 
 

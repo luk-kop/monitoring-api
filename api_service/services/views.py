@@ -54,12 +54,10 @@ class ServicesApi(Resource):
                 url_kwargs['sort'] = sort_by
             if services.after:
                 # Get next page url
-                url_kwargs['after'] = services.after.id
-                next_url = api.url_for(**url_kwargs)
+                next_url = api.url_for(**url_kwargs, after=services.after.id)
             if services.before:
                 # Get prev page url
-                url_kwargs['before'] = services.before.id
-                prev_url = api.url_for(**url_kwargs)
+                prev_url = api.url_for(**url_kwargs, before=services.before.id)
         services_count_up = Service.objects(service_up=True).count()
         # Prepare data to dump
         paging = {
@@ -119,7 +117,7 @@ class ServiceApi(Resource):
         Check whether id is 24-character hex string (compliant with the MongoDB '_id' field).
         """
         if not objectid.ObjectId.is_valid(service_id):
-            abort(400, message='The specified service id is invalid', status=400)
+            abort(400, message='The specified service id is invalid.', status=400)
 
     @staticmethod
     def check_service_exist(service_id):
@@ -128,7 +126,7 @@ class ServiceApi(Resource):
         """
         service = Service.objects(id=service_id).first()
         if not service:
-            abort(404, message=f'Service with id {service_id} does not exist', status=404)
+            abort(404, message=f'Service with id {service_id} does not exist.', status=404)
         return service
 
     @swag_from("swagger/service_get.yml")
@@ -221,4 +219,4 @@ class ServiceApi(Resource):
         self.check_id(service_id)
         service = self.check_service_exist(service_id)
         service.delete()
-        return {'message': f'Service with id {service_id} deleted'}, 200
+        return {'message': f'Service with id {service_id} deleted.'}, 200
