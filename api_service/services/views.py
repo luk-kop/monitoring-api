@@ -42,24 +42,25 @@ class ServicesApi(Resource):
                                            before_id=before_id,
                                            page_limit=page_limit,
                                            sort_by= sort_by)
-        # Get next page url
-        if services.after and sort_by:
-            next_url = api.url_for(ServicesApi, sort=sort_by, limit=page_limit, after=services.after.id, _external=True)
-        elif services.after:
-            next_url = api.url_for(ServicesApi, limit=page_limit, after=services.after.id, _external=True)
-        else:
-            next_url = ''
-        # Get prev page url
-        if services.before and sort_by:
-            prev_url = api.url_for(ServicesApi, sort=sort_by, limit=page_limit, before=services.before.id,
-                                   _external=True)
-        elif services.before:
-            prev_url = api.url_for(ServicesApi, limit=page_limit, before=services.before.id, _external=True)
-        else:
-            prev_url = ''
-        # Get number of running services
+        # Define next and/or prev page url
+        next_url, prev_url = '', ''
+        if services.after or services.before:
+            url_kwargs = {
+                'resource': ServicesApi,
+                'limit': page_limit,
+                '_external': True
+            }
+            if sort_by:
+                url_kwargs['sort'] = sort_by
+            if services.after:
+                # Get next page url
+                url_kwargs['after'] = services.after.id
+                next_url = api.url_for(**url_kwargs)
+            if services.before:
+                # Get prev page url
+                url_kwargs['before'] = services.before.id
+                prev_url = api.url_for(**url_kwargs)
         services_count_up = Service.objects(service_up=True).count()
-
         # Prepare data to dump
         paging = {
             'limit': page_limit,
