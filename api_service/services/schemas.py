@@ -86,7 +86,7 @@ class ServiceSchema(Schema):
     def validate_type(self, data, **kwargs):
         if not data or not isinstance(data, dict):
             raise ValidationError('Invalid input type.', 'services')
-        if 'host' in data.keys() and not isinstance(data.get('host'), dict):
+        if 'host' in data and not isinstance(data.get('host'), dict):
             raise ValidationError('Invalid input type.', 'host')
         return data
 
@@ -145,7 +145,7 @@ class ServiceSchemaQueryParams(Schema):
 
     @pre_load
     def validate_data(self, data, **kwargs):
-        if 'after' in data.keys() and 'before' in data.keys():
+        if 'after' in data and 'before' in data:
             raise ValidationError('before and after cannot be used together', 'query_params.')
         return data
 
@@ -214,6 +214,11 @@ class ServicesSchema(Schema):
 def error_parser(error):
     """
     Custom error output.
+    Example of custom error message:
+    {
+        "message": "The requested URL was not found on the server.",
+        "status" 404
+    }
     """
     errors_new = {}
     for field, value in error.messages.items():

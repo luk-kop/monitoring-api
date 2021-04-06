@@ -18,7 +18,7 @@ class Timestamps(db.EmbeddedDocument):
 class PaginationCursor:
     """
     Custom pagination for 'service' deserialization. Cursor pagination type with 'next' and 'limit' options.
-    The default sorting operation is - sort objects ascending by id.
+    The default sorting method is to sort objects ascending by id
     """
     def __init__(self, iterable, after_id, before_id, page_limit, sort_by):
         self.iterable = iterable
@@ -26,7 +26,7 @@ class PaginationCursor:
         self.before_id = before_id
         self.page_limit = page_limit
         if sort_by:
-            if sort_by[0] == '-':
+            if sort_by.startswith('-'):
                 self.sort_dir = 'descending'
                 self.sort_by = sort_by[1:]
             else:
@@ -41,55 +41,16 @@ class PaginationCursor:
             self.total = iterable.count()
         else:
             self.total = len(iterable)
-        if after_id:
-            # Execute if 'after' query param is present in URL
-            model = iterable(id=after_id).first()
-            # Calculate the next page of items (page after model with 'after_id' id)
-            if self.sort_dir == 'ascending':
-                items_kwargs = {
-                    f'{self.sort_by}__gt': getattr(model, f'{self.sort_by}')
-                }
-                self.items = iterable(**items_kwargs).limit(page_limit)
-            else:
-                items_kwargs = {
-                    f'{self.sort_by}__lt': getattr(model, f'{self.sort_by}')
-                }
-                self.items = iterable(**items_kwargs).order_by(f'-{self.sort_by}').limit(page_limit)
-        elif before_id:
-            # Execute if 'before' query param is present in URL
-            model = iterable(id=before_id).first()
-            # Calculate the prev page of items (page before model with 'after_id' id)
-            if self.sort_dir == 'ascending':
-                items_kwargs = {
-                    f'{self.sort_by}__lt': getattr(model, f'{self.sort_by}')
-                }
-                self.items = iterable(**items_kwargs).limit(page_limit)
-            else:
-                items_kwargs = {
-                    f'{self.sort_by}__gt': getattr(model, f'{self.sort_by}')
-                }
-                self.items = iterable(**items_kwargs).order_by(f'-{self.sort_by}').limit(page_limit)
-            skip_count = self.items.count() - page_limit
-            if skip_count >= 0:
-                self.items = self.items.skip(skip_count)
-        else:
-            # Execute if neither 'before' nor 'after' query params are present in URL
-            if self.sort_dir == 'ascending':
-                self.items = iterable.order_by(self.sort_by).limit(page_limit)
-            else:
-                self.items = iterable.order_by(f'-{self.sort_by}').limit(page_limit)
+        # Find items on current page
+        self.items = self.calculate_items_on_page()
         try:
             # '_last_item' on the page - necessary to determine the new 'after'
             self._last_item = self.items[self.items_count - 1]
             # Check whether there are any objects in db behind '_last_item'
-            if self.sort_dir == 'ascending':
-                items_kwargs = {
-                    f'{self.sort_by}__gt': getattr(self._last_item, f'{self.sort_by}')
-                }
-            else:
-                items_kwargs = {
-                    f'{self.sort_by}__lt': getattr(self._last_item, f'{self.sort_by}')
-                }
+            query_operator = f'{self.sort_by}__gt' if self.sort_dir == 'ascending' else f'{self.sort_by}__lt'
+            items_kwargs = {
+                query_operator: getattr(self._last_item, f'{self.sort_by}')
+            }
             self._items_count_after_last_item = len(self.iterable(**items_kwargs))
         except IndexError:
             self._last_item = None
@@ -97,14 +58,10 @@ class PaginationCursor:
         self._first_item = self.items.first()
         if self._first_item:
             # Check whether there are any objects in db before '_firs_item'
-            if self.sort_dir == 'ascending':
-                items_kwargs = {
-                    f'{self.sort_by}__lt': getattr(self._first_item, f'{self.sort_by}')
-                }
-            else:
-                items_kwargs = {
-                    f'{self.sort_by}__gt': getattr(self._first_item, f'{self.sort_by}')
-                }
+            query_operator = f'{self.sort_by}__lt' if self.sort_dir == 'ascending' else f'{self.sort_by}__gt'
+            items_kwargs = {
+                query_operator: getattr(self._first_item, f'{self.sort_by}')
+            }
             self._items_count_before_first_item = len(self.iterable(**items_kwargs))
 
     @property
@@ -133,6 +90,32 @@ class PaginationCursor:
         Returns number of items.
         """
         return len(self.items)
+
+    def calculate_items_on_page(self):
+        """
+        Returns items on current page.
+        """
+        if self.after_id or self.before_id:
+            # Execute if 'after' or 'before' query param is present in URL
+            model_id = self.after_id if self.after_id  else self.before_id
+            model = self.iterable(id=model_id).first()
+            if self.sort_dir == 'ascending':
+                query_operator = f'{self.sort_by}__gt' if self.after_id else f'{self.sort_by}__lt'
+                items_kwargs = {
+                    query_operator: getattr(model, f'{self.sort_by}')
+                }
+                items = self.iterable(**items_kwargs).order_by(f'{self.sort_by}').limit(self.page_limit)
+            else:
+                query_operator = f'{self.sort_by}__lt' if self.after_id else f'{self.sort_by}__gt'
+                items_kwargs = {
+                    query_operator: getattr(model, f'{self.sort_by}')
+                }
+                items = self.iterable(**items_kwargs).order_by(f'-{self.sort_by}').limit(self.page_limit)
+        else:
+            # Execute if neither 'before' nor 'after' query params are present in URL
+            sort_order = self.sort_by if self.sort_dir == 'ascending' else f'-{self.sort_by}'
+            items = self.iterable.order_by(sort_order).limit(self.page_limit)
+        return items
 
 
 class Host(db.EmbeddedDocument):
