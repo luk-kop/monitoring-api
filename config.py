@@ -35,3 +35,12 @@ class Config:
 
     }
 
+
+class ConfigCelery:
+    broker_url = os.environ.get("CELERY_BROKER_URL")
+    result_backend = os.environ.get("CELERY_RESULT_BACKEND_URL")
+    redbeat_redis_url = os.environ.get('CELERY_REDBEAT_REDIS_URL')
+    beat_scheduler = 'redbeat.RedBeatScheduler'
+    redbeat_key_prefix = 'redbeat:'
+    beat_max_loop_interval = 5
+    beat_schedule = {}

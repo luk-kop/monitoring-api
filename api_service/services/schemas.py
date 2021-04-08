@@ -211,6 +211,22 @@ class ServicesSchema(Schema):
         ordered = True
 
 
+class WatchdogSchema(Schema):
+    """
+    The schema for deserializing 'watchdog' endpoint (POST - JSON).
+    """
+    watchdog = fields.Str(required=True,
+                          error_messages={'required': 'Watchdog field is required.'},
+                          validate=OneOf(choices=['start', 'stop'],
+                                        error='Not valid data. Use start or stop.'))
+
+    @pre_load
+    def validate_type(self, data, **kwargs):
+        if not data or not isinstance(data, dict):
+            raise ValidationError('Invalid input type.', 'services')
+        return data
+
+
 def error_parser(error):
     """
     Custom error output.

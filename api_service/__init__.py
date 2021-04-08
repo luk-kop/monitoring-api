@@ -24,6 +24,7 @@ def register_extensions(app):
     """
     api.add_resource(serv_views.ServicesApi, '/services')
     api.add_resource(serv_views.ServiceApi, '/services/<string:service_id>')
+    api.add_resource(serv_views.WatchdogApi, '/watchdog')
     api.init_app(app)
     db.init_app(app)
     swag.init_app(app)

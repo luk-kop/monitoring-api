@@ -6,10 +6,19 @@ from flask_restful import Resource, abort
 from bson import objectid
 from marshmallow import ValidationError
 from flasgger import swag_from
+from redbeat import RedBeatSchedulerEntry
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from api_service.extensions import api
 from api_service.models import Service
-from api_service.services.schemas import ServiceSchema, ServiceSchemaQueryParams, ServicesSchema, error_parser
+from api_service.services.schemas import (
+    ServiceSchema,
+    ServiceSchemaQueryParams,
+    ServicesSchema,
+    error_parser,
+    WatchdogSchema
+)
+from api_service.watchdog_celery.tasks import celery_app
 
 serv_bp = Blueprint('serv_bp', __name__)
 
@@ -220,3 +229,50 @@ class ServiceApi(Resource):
         service = self.check_service_exist(service_id)
         service.delete()
         return {'message': f'Service with id {service_id} deleted.'}, 200
+
+
+class WatchdogApi(Resource):
+    @staticmethod
+    def _check_redis_started():
+        try:
+            scheduler_job = RedBeatSchedulerEntry.from_key(key='redbeat:background-task', app=celery_app)
+        except (KeyError, RedisConnectionError):
+            abort(503, message='Watchdog service unavailable.', status=503)
+        return scheduler_job
+
+    def get(self):
+        """
+        Return information whether the watchdog service is running.
+        """
+        scheduler_job = self._check_redis_started()
+        if scheduler_job.enabled:
+            return {'watchdog_status': 'up'}, 200
+        else:
+            return {'watchdog_status': 'down'}, 200
+
+    def post(self):
+        """
+        Start or stop the watchdog service.
+        """
+        request_data = request.get_json()
+        schema = WatchdogSchema()
+        try:
+            result = schema.load(request_data)
+        except ValidationError as error:
+            # Custom error output
+            errors_custom = error_parser(error)
+            return {'message': errors_custom, 'status': 400}, 400
+        watchdog_data = result.get('watchdog')
+        scheduler_job = self._check_redis_started()
+        if scheduler_job.enabled and watchdog_data == 'start':
+            return {'message': 'The watchdog is already running.', 'status': 400}, 400
+        elif scheduler_job.enabled and watchdog_data == 'stop':
+            scheduler_job.enabled = False
+            scheduler_job.save()
+            return {'message': 'The watchdog has been stopped.'}, 200
+        elif not scheduler_job.enabled and watchdog_data == 'start':
+            scheduler_job.enabled = True
+            scheduler_job.save()
+            return {'message': 'The watchdog has been activated.'}, 201
+        return {'message': 'The watchdog is not running', 'status': 400}, 400
+

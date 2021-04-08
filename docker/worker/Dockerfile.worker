@@ -5,10 +5,11 @@ WORKDIR /home/watchdog
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-# ENV MONGODB_URL='mongodb://localhost:27017'
 
 # Copy services's files as watchdog user
-COPY --chown=watchdog:watchdog init_db.py requirements_watchdog.txt watchdog.py ./   #TODO: remove init_db.py
+# COPY --chown=watchdog:watchdog init_db.py requirements_watchdog.txt watchdog.py ./   #TODO: remove init_db.py
+#COPY --chown=watchdog:watchdog requirements.txt watchdog.py ./
+COPY . .
 
 # Install dependencies and netcat
 RUN pip install --upgrade pip \
@@ -16,5 +17,3 @@ RUN pip install --upgrade pip \
 	&& apt-get update && apt-get install -y netcat && apt-get clean
 
 USER watchdog
-
-CMD ['python', 'watchdog.py']

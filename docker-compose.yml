@@ -1,19 +1,34 @@
 version: "3.9"
 services:
-  watchdog:
+#  watchdog:
+#    build:
+#      context: .
+#      dockerfile: ./docker/watchdog/Dockerfile.watchdog
+#    # TODO: removw init_db.py
+#    command: bash -c "python init_db.py && python watchdog.py"
+#    restart: always
+#    env_file:
+#      - ./docker/watchdog/.env-watchdog
+#    depends_on:
+#      - mongo
+  web:
     build:
       context: .
-      dockerfile: ./docker/watchdog/Dockerfile.watchdog
-    # TODO: removw init_db.py
-    command: bash -c "python init_db.py && python watchdog.py"
+      dockerfile: ./docker/web/Dockerfile.web
     restart: always
+    command: bash -c "gunicorn -w 2 --bind 0.0.0.0:8080 run:app"
     env_file:
-      - ./docker/watchdog/.env-watchdog
+      - ./docker/web/.env-web
+    ports:
+      - "8080:8080"
     depends_on:
+      - redis
       - mongo
 
   mongo:
-    image: mongo
+    build:
+      context: ./docker/mongo/
+      dockerfile: Dockerfile.mongo
     restart: always
     env_file:
       - ./docker/mongo/.env-mongo
@@ -27,3 +42,19 @@ services:
       - ./docker/mongo-express/.env-express
     depends_on:
       - mongo
+
+  redis:
+    image: redis
+    restart: always
+
+  worker:
+    build:
+      context: .
+      dockerfile: ./docker/worker/Dockerfile.worker
+    command: bash -c "celery -A api_service.watchdog_celery.tasks.celery_app worker --beat --loglevel=info"
+    restart: always
+    env_file:
+      - ./docker/worker/.env-worker
+    depends_on:
+      - redis
+      - web
