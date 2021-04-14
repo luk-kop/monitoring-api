@@ -65,7 +65,9 @@ class MonitoringService:
             # Set timeout 1s (w 1)
             response = subprocess.run(['nc', '-z', '-w 2', host_value, port], capture_output=True)
         else:
-            response = subprocess.run(['nc', '-zu', host_value, port], capture_output=True)
+            # response = subprocess.run(['nc', '-zu', host_value, port], capture_output=True)
+            response = subprocess.run(['sudo', 'nmap', '-sU', '-p', port, host_value], capture_output=True)
+
         if response.returncode == 0:
             # Mark service as responded
             response_time_update = {'$set': {'timestamps.last_responded': datetime.utcnow()}}

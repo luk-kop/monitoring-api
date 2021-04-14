@@ -7,13 +7,17 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 # Copy services's files as watchdog user
-# COPY --chown=watchdog:watchdog init_db.py requirements_watchdog.txt watchdog.py ./   #TODO: remove init_db.py
 #COPY --chown=watchdog:watchdog requirements.txt watchdog.py ./
-COPY . .
+COPY --chown=watchdog:watchdog . .
 
 # Install dependencies and netcat
 RUN pip install --upgrade pip \
 	&& pip install -r requirements.txt \
-	&& apt-get update && apt-get install -y netcat && apt-get clean
+	&& apt-get update \
+	&& apt-get install -y netcat \
+	&& apt-get install -y nmap \
+	&& apt-get install -y sudo \
+	&& apt-get clean \
+	&& echo 'watchdog ALL = (ALL) NOPASSWD: /usr/bin/nmap' >> /etc/sudoers
 
 USER watchdog
