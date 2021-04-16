@@ -11,8 +11,8 @@ from api_service.watchdog_celery.monitoring import MonitoringService
 
 celery_app = Celery(__name__)
 celery_app.config_from_object(ConfigCelery)
-# Create scheduler - default interval 10s
-interval = schedules.schedule(run_every=10)
+# Create scheduler - default interval 20s
+interval = schedules.schedule(run_every=20)
 scheduler_job = RedBeatSchedulerEntry(name='background-task',
                                       task='watchdog_task',
                                       schedule=interval,
@@ -28,8 +28,6 @@ def watchdog_task():
     log_format = '%(asctime)s: %(message)s'
     logging.basicConfig(format=log_format, level=logging.DEBUG)
 
-    # Load environment vars
-    # load_dotenv('.env-watchdog')
     mongodb_url = os.getenv("MONGODB_URL")
 
     with MongoClient(host=mongodb_url, serverSelectionTimeoutMS=10000) as client:

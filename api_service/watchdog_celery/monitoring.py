@@ -18,8 +18,6 @@ class MonitoringService:
         """
         Starts a watchdog service. Each service is being tested in a separate thread.
         """
-        # while True:
-        #     timer_start = time.perf_counter()
         services = self.service_collection.find()
         # Checks if there are any documents in the collection
         if self.service_collection.count_documents({}):
@@ -32,18 +30,13 @@ class MonitoringService:
                 status_thread.start()
         else:
             logging.info('No service documents in the db')
-            # time_interval = time.perf_counter() - timer_start
-            # if time_interval > self.timer:
-            #     continue
-            # time.sleep(self.timer - time_interval)
 
-    def check_service_status(self, service):
+    def check_service_status(self, service: dict):
         """
         Checks the status of a particular service.
         """
-        host_type = service['host']['type']
-        host_value = service['host']['value']
-        port = service['port']
+        host_type, host_value = service['host']['type'], service['host']['value']
+        service_port, service_protocol = service['port'], service['proto']
         service_name = service['name']
         # Get mongodb id ('_id') of current service
         service_id = service['_id']
@@ -61,14 +54,9 @@ class MonitoringService:
                     self.service_collection.update_one(service_to_update, {'$set': {'service_up': False}})
                 # Close thread if problem with resolving occurred.
                 sys.exit()
-        if service['proto'] == 'tcp':
-            # Set timeout 1s (w 1)
-            response = subprocess.run(['nc', '-z', '-w 2', host_value, port], capture_output=True)
-        else:
-            # response = subprocess.run(['nc', '-zu', host_value, port], capture_output=True)
-            response = subprocess.run(['sudo', 'nmap', '-sU', '-p', port, host_value], capture_output=True)
-
-        if response.returncode == 0:
+        # Check port status
+        response = self.port_status(service_protocol, host_value, service_port)
+        if response:
             # Mark service as responded
             response_time_update = {'$set': {'timestamps.last_responded': datetime.utcnow()}}
             self.service_collection.update_one(service_to_update, response_time_update)
@@ -88,7 +76,7 @@ class MonitoringService:
         logging.info(f'The "{service_name}" service is {"UP" if service_status else "DOWN"}')
 
     @staticmethod
-    def resolve_hostname(hostname):
+    def resolve_hostname(hostname: str) -> str:
         """
         Performs DNS query if host is not an ip address.
         """
@@ -97,4 +85,19 @@ class MonitoringService:
             return ip
         except socket.gaierror as err:
             logging.error(f'{hostname}: {err.strerror}')
-            return False
+            return ''
+
+    @staticmethod
+    def port_status(proto: str, ip_address: str, port: str) -> str:
+        """
+        Check whether host is listening on specified port.
+        """
+        if proto == 'tcp':
+            # options = ['sudo', 'nmap', '-p', port, '-oG', '-', ip_address]
+            options = ['nc', '-z', '-w 2', ip_address, port]
+            response = subprocess.run(args=options, capture_output=True, text=True)
+            return True if response.returncode == 0 else False
+        else:
+            options = ['sudo', 'nmap', '-sU', '-p', port, '-oG', '-', ip_address]
+            response = subprocess.run(args=options, capture_output=True, text=True)
+            return True if f'{port}/open' in response.stdout else False
