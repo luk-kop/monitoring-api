@@ -25,7 +25,8 @@ class Config:
     # Flasgger Config
     SWAGGER = {
         'title': 'Monitoring API',
-        'description': '### A simple REST API to monitor the availability of selected services. '
+        'description': '### The Monitoring API is a simple REST API based on Flask-RESTful library. '
+                       'The main purpose of the application is to monitor the availability of selected services. '
                        'The application checks at regular intervals the availability of services on the '
                        'specified ip address (or hostname) and port',
         'version': '1.0.0',

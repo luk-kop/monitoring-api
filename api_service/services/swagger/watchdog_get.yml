@@ -1,0 +1,62 @@
+Checks status of the watchdog service
+Return information whether the watchdog service is running
+---
+tags:
+  - Watchdog
+definitions:
+  Watchdog:
+    type: object
+    properties:
+      watchdog_status:
+        type: string
+        enum: ['up', 'down']
+        example: 'up'
+responses:
+  200:
+    description: 'Status of the watchdog service'
+    schema:
+      type: object
+      properties:
+        watchdog_status:
+          type: string
+          example: 'up'
+  404:
+    description: 'Not found'
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+        status:
+          type: integer
+          example: 404
+      required:
+        - message
+        - status
+  400:
+    description: 'Bad request'
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+        status:
+          type: integer
+          example: 400
+      required:
+        - message
+        - status
+  503:
+    description: 'Redis error'
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Watchdog service unavailable.'
+        status:
+          type: integer
+          example: 503
+      required:
+        - message
+        - status

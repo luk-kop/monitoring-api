@@ -9,7 +9,7 @@ parameters:
     type: string
     required: true
     description: 'The service `id` to update'
-  - name: body
+  - name: service
     in: body
     description: 'The service data to be updated'
     required: true

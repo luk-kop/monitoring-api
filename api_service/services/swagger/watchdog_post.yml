@@ -1,0 +1,75 @@
+Start or stop the watchdog service
+---
+tags:
+  - Watchdog
+parameters:
+  - name: watchdog
+    in: body
+    description: 'Activate or deactivate the watchdog service'
+    required: true
+    schema:
+      type: object
+      properties:
+        watchdog:
+          type: string
+          enum: ['start', 'stop']
+          example: 'start'
+      required:
+        - watchdog
+responses:
+  200:
+    description: 'Deactivate watchdog service'
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'The watchdog has been stopped.'
+  201:
+    description: 'Activate the watchdog service'
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'The watchdog has been activated.'
+  404:
+    description: 'Not found'
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+        status:
+          type: integer
+          example: 404
+      required:
+        - message
+        - status
+  400:
+    description: 'Bad request'
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+        status:
+          type: integer
+          example: 400
+      required:
+        - message
+        - status
+  503:
+    description: 'Redis error'
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Watchdog service unavailable.'
+        status:
+          type: integer
+          example: 503
+      required:
+        - message
+        - status

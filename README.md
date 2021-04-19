@@ -8,18 +8,17 @@
 [![marshmallow 3.10.0](https://img.shields.io/badge/marshmallow-3.10.0-blue.svg)](https://marshmallow.readthedocs.io/en/stable/)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
 
-
-The **Monitoring API** is a simple REST API based on **Flask-RESTful** library. The main purpose of the application is to monitor the availability of selected services. The application checks at regular intervals the availability of services on the specified ip address (or hostname) and port (TCP or UDP).
+> The **Monitoring API** is a simple REST API based on **Flask-RESTful** library. The main purpose of the application is to monitor the availability of selected services. The application checks at regular intervals the availability of services on the specified ip address (or hostname) and port (TCP or UDP).
 
 
 ## Features
-* Monitoring services data is stored in the **MongoDB** database (details and status of services).
+* Monitored services data is stored in the **MongoDB** database (details and status of services).
 * Service monitoring feature (**watchdog** service) can be activated and deactivated on demand with dedicated endpoint.
 * Service monitoring feature (**watchdog** service) is executed as background task with **Celery** (worker), **celery-redbeat** (beat scheduler) and **Redis** (broker and result backend). 
 * The application allows the user to add services to be monitored.
 * The user can modify and delete selected service. Moreover, it is possible to delete all services from the database with a single endpoint.
 * All monitored services can be returned by application.
-* Sorting and pagination (cursor-based) functionalities has been implemented. The returned services can be sorted by id (MongoDB id) or name.
+* Sorting and pagination (cursor-based) functionalities has been implemented. The returned services can be sorted by id (MongoDB `_id`) or name.
 * Interactive API documentation with Swagger UI (OpenAPI v2.0 specification)
 
 ## Getting Started
@@ -49,7 +48,7 @@ Other prerequisites:
 
   
 ### Running the app
-The recommended way to run applications is to build it with `docker-compose` tool.
+The recommended way to run application is to build it with `docker-compose` tool.
 
 In order to correctly start the application, you must run the following commands in the project root directory (`monitoring-api`).
 
@@ -81,3 +80,8 @@ $ docker-compose ps
 ```bash
 $ docker-compose stop
 ```
+
+## Monitoring API Endpoints
+Below you can find the list of API endpoints (view from Swagger UI).
+
+![Application endpoints](./images/flassger-enpoints.png)

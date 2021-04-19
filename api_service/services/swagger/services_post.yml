@@ -3,7 +3,7 @@ Creates new service
 tags:
   - Services
 parameters:
-  - name: body
+  - name: service
     in: body
     description: 'Details of the service to be created'
     required: true

@@ -8,7 +8,6 @@ click==7.1.2
 click-didyoumean==0.0.3
 click-plugins==1.1.1
 click-repl==0.1.6
-dnspython==2.1.0
 email-validator==1.1.2
 flasgger==0.9.5
 Flask==1.1.2

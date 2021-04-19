@@ -240,6 +240,7 @@ class WatchdogApi(Resource):
             abort(503, message='Watchdog service unavailable.', status=503)
         return scheduler_job
 
+    @swag_from("swagger/watchdog_get.yml")
     def get(self):
         """
         Return information whether the watchdog service is running.
@@ -250,6 +251,7 @@ class WatchdogApi(Resource):
         else:
             return {'watchdog_status': 'down'}, 200
 
+    @swag_from("swagger/watchdog_post.yml")
     def post(self):
         """
         Start or stop the watchdog service.
