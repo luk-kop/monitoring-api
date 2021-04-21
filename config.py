@@ -16,9 +16,6 @@ class Config:
     DEBUG = False
     TESTING = False
     SECRET_KEY = os.environ.get('SECRET_KEY')
-    MONGODB_SETTINGS = {
-        'host': os.environ.get('MONGODB_URL'),
-    }
     # Default number of documents on page (api results pagination)
     DEFAULT_PAGINATION_LIMIT = 6
     MAX_PAGINATION_LIMIT = 30
@@ -37,7 +34,40 @@ class Config:
     }
 
 
+class ProdConfig(Config):
+    """
+    Set Flask configuration vars for production.
+    """
+    MONGODB_SETTINGS = {
+        'host': os.environ.get('MONGODB_URL'),
+    }
+
+
+class TestConfig(Config):
+    """
+    Set Flask configuration vars for testing.
+    """
+    DEBUG = True
+    TESTING = True
+    MONGODB_SETTINGS = {
+        'host': os.environ.get('MONGODB_URL_DEV', 'mongodb://localhost:27017/testdb'),
+    }
+
+
+class DevConfig(Config):
+    """
+    Set Flask configuration vars for testing.
+    """
+    DEBUG = True
+    MONGODB_SETTINGS = {
+        'host': os.environ.get('MONGODB_URL_DEV', 'mongodb://localhost:27017/testdb'),
+    }
+
+
 class ConfigCelery:
+    """
+    Set Celery configuration.
+    """
     broker_url = os.environ.get("CELERY_BROKER_URL")
     result_backend = os.environ.get("CELERY_RESULT_BACKEND_URL")
     redbeat_redis_url = os.environ.get('CELERY_REDBEAT_REDIS_URL')
@@ -45,3 +75,10 @@ class ConfigCelery:
     redbeat_key_prefix = 'redbeat:'
     beat_max_loop_interval = 5
     beat_schedule = {}
+
+
+app_config = {
+    'development': DevConfig,
+    'testing': TestConfig,
+    'production': ProdConfig,
+}

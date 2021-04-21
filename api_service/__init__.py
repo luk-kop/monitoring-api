@@ -1,16 +1,16 @@
 from flask import Flask
 
-from config import Config
+from config import app_config
 from api_service.extensions import api, db, swag
 from api_service.services import views as serv_views
 
 
-def create_app():
+def create_app(config_mode):
     """
     Construct the core app object.
     """
     app = Flask(__name__)
-    app.config.from_object(Config)
+    app.config.from_object(app_config[config_mode])
     with app.app_context():
         # Initialize Plugins
         register_extensions(app)
