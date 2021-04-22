@@ -74,6 +74,9 @@ $ docker-compose ps
 
 
 4. To open **Mongo Express** (web-based MongoDB admin console) enter in browser `http://localhost:8081`.
+Login with default credentials:
+   - username: `mongo`
+   - password: `express`
 
 
 5. To stop application run:

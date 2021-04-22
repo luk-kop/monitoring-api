@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from celery import schedules
 
 
 basedir = Path(__file__).resolve().parent
@@ -32,6 +33,24 @@ class Config:
         # 'specs_route': '/apidocs/'
 
     }
+    # Celery Config
+    CELERY = {
+        'broker_url': os.environ.get("CELERY_BROKER_URL"),
+        'result_backend': os.environ.get("CELERY_RESULT_BACKEND_URL"),
+        'redbeat_redis_url': os.environ.get('CELERY_REDBEAT_REDIS_URL'),
+        'beat_scheduler': 'redbeat.RedBeatScheduler',
+        'redbeat_key_prefix': 'redbeat:',
+        'beat_max_loop_interval': 5,
+        'beat_schedule': {
+            # Execute every 30sec (by default) after enabled by user
+            'background-task': {
+                'task': 'watchdog_task',
+                'schedule': schedules.schedule(run_every=30),
+                'relative': True,
+                'enabled': False
+            },
+        }
+    }
 
 
 class ProdConfig(Config):
@@ -39,7 +58,7 @@ class ProdConfig(Config):
     Set Flask configuration vars for production.
     """
     MONGODB_SETTINGS = {
-        'host': os.environ.get('MONGODB_URL'),
+        'host': os.environ.get('MONGODB_URL_PROD'),
     }
 
 
@@ -50,7 +69,7 @@ class TestConfig(Config):
     DEBUG = True
     TESTING = True
     MONGODB_SETTINGS = {
-        'host': os.environ.get('MONGODB_URL_DEV', 'mongodb://localhost:27017/testdb'),
+        'host': os.environ.get('MONGODB_URL_DEV', 'mongodb://localhost:27017/devdb'),
     }
 
 
@@ -60,21 +79,8 @@ class DevConfig(Config):
     """
     DEBUG = True
     MONGODB_SETTINGS = {
-        'host': os.environ.get('MONGODB_URL_DEV', 'mongodb://localhost:27017/testdb'),
+        'host': os.environ.get('MONGODB_URL_DEV', 'mongodb://localhost:27017/devdb'),
     }
-
-
-class ConfigCelery:
-    """
-    Set Celery configuration.
-    """
-    broker_url = os.environ.get("CELERY_BROKER_URL")
-    result_backend = os.environ.get("CELERY_RESULT_BACKEND_URL")
-    redbeat_redis_url = os.environ.get('CELERY_REDBEAT_REDIS_URL')
-    beat_scheduler = 'redbeat.RedBeatScheduler'
-    redbeat_key_prefix = 'redbeat:'
-    beat_max_loop_interval = 5
-    beat_schedule = {}
 
 
 app_config = {

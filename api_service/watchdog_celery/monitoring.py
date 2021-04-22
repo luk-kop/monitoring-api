@@ -93,7 +93,6 @@ class MonitoringService:
         Check whether host is listening on specified port.
         """
         if proto == 'tcp':
-            # options = ['sudo', 'nmap', '-p', port, '-oG', '-', ip_address]
             options = ['nc', '-z', '-w 2', ip_address, port]
             response = subprocess.run(args=options, capture_output=True, text=True)
             return True if response.returncode == 0 else False

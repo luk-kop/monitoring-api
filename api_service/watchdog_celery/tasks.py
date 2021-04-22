@@ -1,39 +1,28 @@
-import os
 import logging
 
 from pymongo import MongoClient, errors
-from celery import Celery, schedules
-from redbeat import RedBeatSchedulerEntry
+from pymongo.uri_parser import parse_uri
+from flask import current_app
 
-from config import ConfigCelery
 from api_service.watchdog_celery.monitoring import MonitoringService
+from api_service.extensions import celery
 
 
-celery_app = Celery(__name__)
-celery_app.config_from_object(ConfigCelery)
-# Create scheduler - default interval 20s
-interval = schedules.schedule(run_every=20)
-scheduler_job = RedBeatSchedulerEntry(name='background-task',
-                                      task='watchdog_task',
-                                      schedule=interval,
-                                      relative=True,
-                                      enabled=False,
-                                      app=celery_app)
-scheduler_job.save()
-
-
-@celery_app.task(name='watchdog_task')
+@celery.task(name='watchdog_task')
 def watchdog_task():
     # Logging configuration
     log_format = '%(asctime)s: %(message)s'
     logging.basicConfig(format=log_format, level=logging.DEBUG)
 
-    mongodb_url = os.getenv("MONGODB_URL")
+    mongodb_uri = current_app.config.get('MONGODB_SETTINGS')['host']
+    # Get database name directly from the MongoDB URI.
+    # When you use MongoClient with 'host' parameter, the database name in URI is being ignored.
+    mongodb_db_name = parse_uri(mongodb_uri)['database']
 
-    with MongoClient(host=mongodb_url, serverSelectionTimeoutMS=10000) as client:
-        # MongoDB connection timeout is set to 10s
-        # Use 'watchdogdb' database
-        db = client.watchdogdb
+    with MongoClient(host=mongodb_uri, serverSelectionTimeoutMS=10000) as client:
+        # MongoDB connection timeout is set to 10 sec
+        # Use database from MongoDB URI
+        db = client[mongodb_db_name]
         watchdog = MonitoringService(db)
         try:
             watchdog.start()

@@ -1,16 +1,5 @@
 version: "3.9"
 services:
-#  watchdog:
-#    build:
-#      context: .
-#      dockerfile: ./docker/watchdog/Dockerfile.watchdog
-#    # TODO: removw init_db.py
-#    command: bash -c "python init_db.py && python watchdog.py"
-#    restart: always
-#    env_file:
-#      - ./docker/watchdog/.env-watchdog
-#    depends_on:
-#      - mongo
   web:
     build:
       context: .
@@ -51,7 +40,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/worker/Dockerfile.worker
-    command: bash -c "celery -A api_service.watchdog_celery.tasks.celery_app worker --beat --loglevel=info"
+    command: bash -c "celery -A api_service.celery_worker:app worker --beat --loglevel=info"
     restart: always
     env_file:
       - ./docker/worker/.env-worker

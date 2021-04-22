@@ -9,7 +9,7 @@ from flasgger import swag_from
 from redbeat import RedBeatSchedulerEntry
 from redis.exceptions import ConnectionError as RedisConnectionError
 
-from api_service.extensions import api
+from api_service.extensions import api, celery
 from api_service.models import Service
 from api_service.services.schemas import (
     ServiceSchema,
@@ -18,7 +18,7 @@ from api_service.services.schemas import (
     error_parser,
     WatchdogSchema
 )
-from api_service.watchdog_celery.tasks import celery_app
+
 
 serv_bp = Blueprint('serv_bp', __name__)
 
@@ -235,7 +235,7 @@ class WatchdogApi(Resource):
     @staticmethod
     def _check_redis_started():
         try:
-            scheduler_job = RedBeatSchedulerEntry.from_key(key='redbeat:background-task', app=celery_app)
+            scheduler_job = RedBeatSchedulerEntry.from_key(key='redbeat:background-task', app=celery)
         except (KeyError, RedisConnectionError):
             abort(503, message='Watchdog service unavailable.', status=503)
         return scheduler_job
