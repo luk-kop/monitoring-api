@@ -58,7 +58,7 @@ class ProdConfig(Config):
     Set Flask configuration vars for production.
     """
     MONGODB_SETTINGS = {
-        'host': os.environ.get('MONGODB_URL_PROD'),
+        'host': os.environ.get('MONGODB_URI_PROD'),
     }
 
 
@@ -69,7 +69,7 @@ class TestConfig(Config):
     DEBUG = True
     TESTING = True
     MONGODB_SETTINGS = {
-        'host': os.environ.get('MONGODB_URL_DEV', 'mongodb://localhost:27017/devdb'),
+        'host': os.environ.get('MONGODB_URI_TEST', 'mongodb://localhost:27017/testdb'),
     }
 
 
@@ -79,7 +79,7 @@ class DevConfig(Config):
     """
     DEBUG = True
     MONGODB_SETTINGS = {
-        'host': os.environ.get('MONGODB_URL_DEV', 'mongodb://localhost:27017/devdb'),
+        'host': os.environ.get('MONGODB_URI_DEV', 'mongodb://localhost:27017/devdb'),
     }
 
 

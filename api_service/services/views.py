@@ -108,7 +108,7 @@ class ServicesApi(Resource):
             errors_custom = error_parser(error)
             return {'message': errors_custom, 'status': 400}, 400
         service = Service(**result).save()
-        return {'id': str(service.id)}, 201, {'Location': f'{request.base_url}/{str(service.id)}'} # request.baseurl ???
+        return {'id': str(service.id)}, 201, {'Location': f'{request.base_url}/{str(service.id)}'}
 
     @swag_from("swagger/services_delete.yml")
     def delete(self):
