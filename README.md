@@ -12,9 +12,14 @@
 
 
 ## Features
-* Monitored services data is stored in the **MongoDB** database (details and status of services).
-* Service monitoring feature (**watchdog** service) can be activated and deactivated on demand with dedicated endpoint.
-* Service monitoring feature (**watchdog** service) is executed as background task with **Celery** (worker), **celery-redbeat** (beat scheduler) and **Redis** (broker and result backend). 
+* The monitored services data is stored in the **MongoDB** database (details and status of services).
+* The monitored services are specified using:
+    - ip address or hostname (DNS);
+    - transport protocol - TCP or UDP;
+    - network port.
+* Service monitoring feature (**watchdog** service) can be activated and deactivated on demand with a dedicated endpoint.
+* Service monitoring feature (**watchdog** service) is executed as background task with **Celery** (worker), **celery-redbeat** (beat scheduler) and **Redis** (broker and result backend).
+* Service status is determined by the availability of the monitored host port.
 * The application allows the user to add services to be monitored.
 * The user can modify and delete selected service. Moreover, it is possible to delete all services from the database with a single endpoint.
 * All monitored services can be returned by application.
@@ -36,9 +41,10 @@ Python third party packages:
 * [marshmallow](https://marshmallow.readthedocs.io/en/stable/)
 * [flasgger](https://github.com/flasgger/flasgger)
 * [python-dotenv](https://pypi.org/project/python-dotenv/)
+* [pytest](https://docs.pytest.org/en/6.2.x/)
 
 Other prerequisites:
-* The ip address on which the **Monitoring API** will run, should be allowed in the firewall configuration of the monitored host. 
+* The monitored host should have a firewall rule added allowing to query the monitored service port by the ip address where the **Monitoring API** will be run.
   This is necessary to obtain reliable data about the availability of the monitored services.
 * Under the hood application use `netcat` and `nmap` packages to test host's availability. 
   For this reason, it is **recommended** to run the application using the `docker-compose` tool with already prepared dockerfiles.
@@ -47,12 +53,12 @@ Other prerequisites:
   - run the **MongoDB**, **Redis** and **Celery** worker.
 
   
-### Running the app
+## Build and run the app with Docker-Compose
 The recommended way to run application is to build it with `docker-compose` tool.
 
 In order to correctly start the application, you must run the following commands in the project root directory (`monitoring-api`).
 
-1. Before running `docker-compose` command you should create `.env-web`, `.env-mongo`, `.env-express` and `.env-worker` files (ENVs for Flask app and PostgreSQL). The best solution is to copy the existing example files and edit the necessary data.
+1. Before running `docker-compose` command you should create `.env-web`, `.env-mongo`, `.env-express` and `.env-worker` files. The best solution is to copy the existing example files and edit the necessary data.
 ```bash
 # Create required environment files using examples from repository
 $ cp docker/web/.env-web-example docker/web/.env-web
@@ -84,7 +90,50 @@ Login with default credentials:
 $ docker-compose stop
 ```
 
+## Build and run the app with virtualenv tool
+The application can be build and run locally with `virtualenv` tool.
+As mentioned in the requirements, to run applications locally you need to install `netcat` and `nmap` packages at the OS level.
+
+1. Run following commands in order to create virtual environment and install the required packages.
+    ```bash
+    $ virtualenv venv
+    $ source venv/bin/activate
+    (venv) $ pip install -r requirements.txt
+    ```
+
+2. Before running application you should create `.env` file in the root application directory (`monitoring-api`).
+   The best solution is to copy the existing example file `.env-example` and edit the necessary data.
+    ```bash
+    $ cp .env-example .env
+    ```
+
+3. Run the **MongoDB**, **Redis** and **Celery** worker:
+   
+   The fastest and easiest way to start MongoDB and Redis is to use `docker` tool:
+    ```bash
+    $ docker run --name mongo-api -d -p 27017:27017 mongo
+    $ docker run --name redis-api --user redis -d -p 6379:6379 redis
+    ````
+    Run another (second) terminal session and in `monitoring-api` directory enter the following commands to run Celery worker:
+    ```bash
+    $ source venv/bin/activate
+    $ (venv} $ celery -A api_service.watchdog_celery.tasks.celery_app worker --beat --loglevel=info
+    ```
+4. Set the `FLASK_APP` environment variable to point `run.py` script and then invoke `flask run` command.
+    ```bash
+    (venv) $ export FLASK_APP=run.py
+    (venv) $ flask run 
+    ```
+
 ## Monitoring API Endpoints
 Below you can find the list of API endpoints (view from Swagger UI).
 
 ![Application endpoints](./images/flassger-enpoints.png)
+
+
+## Testing
+
+Tests should be run locally (inside virtual environment - `venv`). After starting the application, run all tests with the following command:
+```bash
+(venv) $ pytest -v
+```

@@ -12,8 +12,7 @@ ENV PYTHONUNBUFFERED 1
 COPY --chown=web:web . .
 
 # install dependencies and gunicorn
-RUN pip install --upgrade pip \
-	&& pip install -r requirements.txt \
+RUN pip install -r requirements.txt \
 	&& pip install gunicorn \
 	&& apt-get update && apt-get install -y curl && apt-get clean
 

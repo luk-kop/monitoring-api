@@ -10,8 +10,7 @@ ENV PYTHONUNBUFFERED 1
 COPY --chown=watchdog:watchdog . .
 
 # Install dependencies and netcat
-RUN pip install --upgrade pip \
-	&& pip install -r requirements.txt \
+RUN pip install -r requirements.txt \
 	&& apt-get update \
 	&& apt-get install -y netcat \
 	&& apt-get install -y nmap \

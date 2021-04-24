@@ -39,15 +39,6 @@ def test_create_service(test_client, example_service_data):
     WHEN the '/services' endpoint is posted (POST)
     THEN check that a '201' code is returned
     """
-    # post_data = {
-    #     'name': 'test-service-01',
-    #     'host': {
-    #         'type': 'ip',
-    #         'value': '192.168.1.10'
-    #     },
-    #     'proto': 'tcp',
-    #     'port': '1111'
-    # }
     headers = {
         "Content-Type": "application/json",
     }
@@ -72,15 +63,6 @@ def test_create_service_bad_request(test_client, example_service_data):
     WHEN the '/services' page is requested (GET)
     THEN check that a '400' code is returned
     """
-    # post_data = {
-    #     'name': 'test-service-01',
-    #     'host': {
-    #         'type': 'ip',
-    #         'value': '192.168.1.10'
-    #     },
-    #     'proto': 'tcp',
-    #     'port': '1111'
-    # }
     post_data = example_service_data
     headers = {
         "Content-Type": "application/json",
