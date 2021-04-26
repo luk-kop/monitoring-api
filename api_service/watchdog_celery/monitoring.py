@@ -6,8 +6,15 @@ import logging
 import threading
 from uuid import uuid4
 
+from redbeat import RedBeatSchedulerEntry
+
+from api_service.extensions import celery
+
 
 class MonitoringService:
+    """
+    Class specifying the object responsible for checking the status of monitored services.
+    """
     def __init__(self, db, timer=10):
         self.timer = timer
         self.db = db
@@ -100,3 +107,25 @@ class MonitoringService:
             options = ['sudo', 'nmap', '-sU', '-p', port, '-oG', '-', ip_address]
             response = subprocess.run(args=options, capture_output=True, text=True)
             return True if f'{port}/open' in response.stdout else False
+
+
+class WatchdogEntry:
+    """
+    Proxy to celery job.
+    """
+    def __init__(self, key='redbeat:watchdog-task'):
+        self.key = key
+        # Return KeyError or RedisConnectionError if encounter problem with Redis
+        self.job = RedBeatSchedulerEntry.from_key(key=self.key, app=celery)
+
+    @property
+    def enabled(self):
+        return self.job.enabled
+
+    def enable_job(self):
+        self.job.enabled = True
+        self.job.save()
+
+    def disable_job(self):
+        self.job.enabled = False
+        self.job.save()

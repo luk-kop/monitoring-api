@@ -43,12 +43,19 @@ class Config:
         'beat_max_loop_interval': 5,
         'beat_schedule': {
             # Execute every 30sec (by default) after enabled by user
-            'background-task': {
+            'watchdog-task': {
                 'task': 'watchdog_task',
                 'schedule': schedules.schedule(run_every=30),
                 'relative': True,
                 'enabled': False
             },
+            # Execute every 20sec
+            'background-task': {
+                'task': 'service_status_task',
+                'schedule': 20.0,
+                'relative': True,
+                'enabled': True
+            }
         }
     }
 
