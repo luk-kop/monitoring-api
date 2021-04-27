@@ -48,16 +48,16 @@ class MonitoringService:
         service_id = service['_id']
         # Service will be updated using MongoDB id ('_id')
         service_to_update = {'_id': service_id}
-        current_app.logger.info(f'Started checking the "{service_name}" service')
 
+        current_app.logger.info(f'Started checking the "{service_name}" service')
         # Check host type and resolve hostname to ip if needed.
         if host_type == 'hostname':
             host_value = self.resolve_hostname(host_value)
             if not host_value:
-                # Change 'service_up' status if 'True'
-                if service['service_up']:
+                # Change service 'status' if 'up'
+                if service['status'] in ['up', 'unknown']:
                     # Update service status to 'False' (update db document)
-                    self.service_collection.update_one(service_to_update, {'$set': {'service_up': False}})
+                    self.service_collection.update_one(service_to_update, {'$set': {'status': 'down'}})
                 # Close thread if problem with resolving occurred.
                 sys.exit()
         # Check port status
@@ -66,20 +66,21 @@ class MonitoringService:
             # Mark service as responded
             response_time_update = {'$set': {'timestamps.last_responded': datetime.utcnow()}}
             self.service_collection.update_one(service_to_update, response_time_update)
-            service_status = True
+            service_status = 'up'
         else:
-            service_status = False
+            service_status = 'down'
         # Mark service as tested
         tested_time_update = {'$set': {'timestamps.last_tested': datetime.utcnow()}}
         self.service_collection.update_one(service_to_update, tested_time_update)
 
         # Update service in db only if 'status' is changed
-        if service_status != service['service_up']:
-            status_new_value = {'$set': {'service_up': service_status}}
+        if service_status != service['status']:
+            status_new_value = {'$set': {'status': service_status}}
             # Update service status (update db document)
             self.service_collection.update_one(service_to_update, status_new_value)
-            current_app.logger.info(f'The "{service_name}" changed status to {"UP" if service_status else "DOWN"}')
-        current_app.logger.info(f'The "{service_name}" service is {"UP" if service_status else "DOWN"}')
+            current_app.logger.info(f'The "{service_name}" changed status to '
+                                    f'{"UP" if service_status == "up" else "DOWN"}')
+        current_app.logger.info(f'The "{service_name}" service is {"UP" if service_status == "up" else "DOWN"}')
 
     @staticmethod
     def resolve_hostname(hostname: str) -> str:

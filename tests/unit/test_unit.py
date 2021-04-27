@@ -23,4 +23,4 @@ def test_new_service_model(init_database):
     assert service.host.value == 'test123.service.local'
     assert service.proto == 'tcp'
     assert service.port == '23'
-    assert not service.service_up
+    assert not service.status == 'up'

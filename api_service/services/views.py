@@ -67,7 +67,7 @@ class ServicesApi(Resource):
             if services.before:
                 # Get prev page url
                 prev_url = api.url_for(**url_kwargs, before=services.before.id)
-        services_count_up = Service.objects(service_up=True).count()
+        services_count_up = Service.objects(status='up').count()
         # Prepare data to dump
         paging = {
             'limit': page_limit,

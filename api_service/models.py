@@ -135,7 +135,7 @@ class Service(db.Document):
     port = db.StringField(max_length=8, required=True)
     proto = db.StringField(choices=('tcp', 'udp'), required=True)
     timestamps = db.EmbeddedDocumentField(document_type=Timestamps, default=Timestamps)
-    service_up = db.BooleanField(required=True, default=False)
+    status = db.StringField(choices=('up', 'down', 'unknown'), default='unknown')
 
     @classmethod
     def paginate_cursor(cls, **kwargs):

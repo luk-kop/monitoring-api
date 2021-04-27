@@ -86,9 +86,9 @@ definitions:
           edited:
             type: string
             format: date-time
-      service_up:
-        type: boolean
-        example: false
+      status:
+        type: string
+        example: "down"
 responses:
   200:
     description: 'The service successfully updated'

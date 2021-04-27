@@ -19,7 +19,7 @@ services_dummy_data = [
             'created': datetime.utcnow(),
             'edited': datetime.utcnow()
         },
-        'service_up': True
+        'status': 'up'
     },
     {
         'name': 'wrong-hostname',
@@ -35,7 +35,7 @@ services_dummy_data = [
             'created': datetime.utcnow(),
             'edited': datetime.utcnow()
         },
-        'service_up': True
+        'status': 'up'
     },
     {
         'name': 'home-ssh-service',
@@ -51,7 +51,7 @@ services_dummy_data = [
             'created': datetime.utcnow(),
             'edited': datetime.utcnow()
         },
-        'service_up': True
+        'status': 'up'
     },
     {
         'name': 'home-ntp-service',
@@ -67,7 +67,7 @@ services_dummy_data = [
             'created': datetime.utcnow(),
             'edited': datetime.utcnow()
         },
-        'service_up': True
+        'status': 'up'
     },
     {
         'name': 'localhost-nmea-service',
@@ -83,7 +83,7 @@ services_dummy_data = [
             'created': datetime.utcnow(),
             'edited': datetime.utcnow()
         },
-        'service_up': True
+        'status': 'up'
     },
     {
         'name': 'dns-google',
@@ -99,7 +99,7 @@ services_dummy_data = [
             'created': datetime.utcnow(),
             'edited': datetime.utcnow()
         },
-        'service_up': True
+        'status': 'up'
     }
 ]
 

@@ -80,7 +80,8 @@ class ServiceSchema(Schema):
                       validate=Length(max=8))
     timestamps = fields.Nested(ServiceTimestampsSchema(),
                                dump_only=True)
-    service_up = fields.Boolean(dump_only=True)
+    status = fields.Str(dump_only=True,
+                        validate=OneOf(choices=['up', 'down', 'unknown']))
 
     @pre_load
     def validate_type(self, data, **kwargs):

@@ -89,7 +89,7 @@ definitions:
                 name: "home-ntp-service"
                 port: "123"
                 proto: "udp"
-                service_up: true
+                status: "up"
                 host:
                   type: "ip"
                   value: "192.168.1.10"
@@ -102,7 +102,7 @@ definitions:
                 name: "home-dns-service"
                 port: "53"
                 proto: "udp"
-                service_up: false
+                status: "down"
                 host:
                   type: "hostname"
                   value: "ns1.example.com"
@@ -154,9 +154,9 @@ definitions:
           edited:
             type: string
             format: date-time
-      service_up:
-        type: boolean
-        example: false
+      status:
+        type: string
+        example: "down"
 responses:
   200:
     description: 'Details of the selected service'

@@ -20,6 +20,10 @@
 * Service monitoring feature (**watchdog** service) can be activated and deactivated on demand with a dedicated endpoint.
 * Service monitoring feature (**watchdog** service) is executed as background task with **Celery** (worker), **celery-redbeat** (beat scheduler) and **Redis** (broker and result backend).
 * Service status is determined by the availability of the monitored host port.
+* The monitored can have the following availability status:
+    - `up` - service is available (**watchdog** service is running);
+    - `down` - service not available (**watchdog** service is running);
+    - `unknown` - service status is unknown because **watchdog** service is not running.
 * The application allows the user to add services to be monitored.
 * The user can modify and delete selected service. Moreover, it is possible to delete all services from the database with a single endpoint.
 * All monitored services can be returned by application.

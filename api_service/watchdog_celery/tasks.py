@@ -43,7 +43,7 @@ def change_status_to_unknown_task():
     """
     try:
         watchdog_job = WatchdogEntry()
-        print(f'Watchdog enabled: {watchdog_job.enabled}')
+        current_app.logger.info(f'Watchdog enabled: {watchdog_job.enabled}')
     except (KeyError, RedisConnectionError) as error:
         current_app.logger.error(f'Error: {error} in service_status_task')
         return
@@ -52,14 +52,6 @@ def change_status_to_unknown_task():
         mongodb_uri, mongodb_db_name = get_mongo_db_name()
         with MongoClient(host=mongodb_uri, serverSelectionTimeoutMS=10000) as client:
             db = client[mongodb_db_name]
-
-            services = db.service.find()
-
-            for service in services:
-                # Break loop if watchdog service is started during iteration execution.
-                if not watchdog_job.enabled:
-                    break
-                if service['status'] != 'unknown':
-                    # db.service.update_one({'_id': service['_id']}, {'$set': {'status': 'unknown'}})
-                    pass
-                print(f'{service["name"]}')
+            # Update all documents in 'service' collection
+            db.service.update_many({}, {'$set': {'status': 'unknown'}})
+            current_app.logger.info(f'Changed services status to "unknown"')
