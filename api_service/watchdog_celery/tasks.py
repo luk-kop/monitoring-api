@@ -1,5 +1,3 @@
-import logging
-
 from pymongo import MongoClient, errors
 from pymongo.uri_parser import parse_uri
 from flask import current_app
@@ -10,20 +8,22 @@ from api_service.extensions import celery
 from api_service.watchdog_celery.monitoring import WatchdogEntry
 
 
+def get_mongo_db_name():
+    """
+    Get database name directly from the MongoDB URI.
+    """
+    mongodb_uri = current_app.config.get('MONGODB_SETTINGS')['host']
+    # When you use MongoClient with 'host' parameter, the database name in URI is being ignored.
+    mongodb_db_name = parse_uri(mongodb_uri)['database']
+    return mongodb_uri, mongodb_db_name
+
+
 @celery.task(name='watchdog_task')
 def watchdog_task():
     """
     Run watchdog (monitoring) service.
     """
-    # Logging configuration
-    log_format = '%(asctime)s: %(message)s'
-    logging.basicConfig(format=log_format, level=logging.DEBUG)
-
-    mongodb_uri = current_app.config.get('MONGODB_SETTINGS')['host']
-    # Get database name directly from the MongoDB URI.
-    # When you use MongoClient with 'host' parameter, the database name in URI is being ignored.
-    mongodb_db_name = parse_uri(mongodb_uri)['database']
-
+    mongodb_uri, mongodb_db_name = get_mongo_db_name()
     with MongoClient(host=mongodb_uri, serverSelectionTimeoutMS=10000) as client:
         # MongoDB connection timeout is set to 10 sec
         # Use database from MongoDB URI
@@ -32,18 +32,34 @@ def watchdog_task():
         try:
             watchdog.start()
         except errors.ServerSelectionTimeoutError:
-            logging.error(f'MongoDB server is not reachable')
+            current_app.logger.error('MongoDB server is not reachable')
 
 
-@celery.task(name='service_status_task')
-def service_status_task():
+@celery.task(name='service_unknown_status_task')
+def change_status_to_unknown_task():
     """
     Changing services status if watchdog is down.
     The task is executed as a background job (triggered at regular intervals).
     """
-    # TODO: changing services status if watchdog is down
     try:
         watchdog_job = WatchdogEntry()
         print(f'Watchdog enabled: {watchdog_job.enabled}')
-    except (KeyError, RedisConnectionError):
-        print(f'Watchdog enabled: False')
+    except (KeyError, RedisConnectionError) as error:
+        current_app.logger.error(f'Error: {error} in service_status_task')
+        return
+
+    if not watchdog_job.enabled:
+        mongodb_uri, mongodb_db_name = get_mongo_db_name()
+        with MongoClient(host=mongodb_uri, serverSelectionTimeoutMS=10000) as client:
+            db = client[mongodb_db_name]
+
+            services = db.service.find()
+
+            for service in services:
+                # Break loop if watchdog service is started during iteration execution.
+                if not watchdog_job.enabled:
+                    break
+                if service['status'] != 'unknown':
+                    # db.service.update_one({'_id': service['_id']}, {'$set': {'status': 'unknown'}})
+                    pass
+                print(f'{service["name"]}')

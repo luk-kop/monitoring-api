@@ -1,4 +1,6 @@
 import os
+import logging
+import sys
 
 from flask import Flask
 
@@ -7,7 +9,7 @@ from api_service.extensions import api, db, swag, celery
 from api_service.services import views as serv_views
 
 
-def create_app(config_mode):
+def create_app(config_mode=os.environ.get('APP_MODE')):
     """
     Construct the core app object.
     """
@@ -18,6 +20,7 @@ def create_app(config_mode):
         register_extensions(app)
         register_blueprints(app)
         init_celery(app)
+        configure_logger(app)
         return app
 
 
@@ -57,3 +60,15 @@ def init_celery(app=None):
 
     celery.Task = ContextTask
     return celery
+
+
+def configure_logger(app):
+    """
+    Configure loggers.
+    """
+    app_formatter = logging.Formatter('%(asctime)s: %(message)s')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(app_formatter)
+    handler.setLevel(logging.DEBUG)
+    if not app.logger.handlers:
+        app.logger.addHandler(handler)

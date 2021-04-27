@@ -51,7 +51,7 @@ class Config:
             },
             # Execute every 20sec
             'background-task': {
-                'task': 'service_status_task',
+                'task': 'service_unknown_status_task',
                 'schedule': 20.0,
                 'relative': True,
                 'enabled': True
