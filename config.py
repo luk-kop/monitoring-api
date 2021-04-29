@@ -34,6 +34,8 @@ class Config:
 
     }
     # Celery Config
+    WATCHDOG_CHECK_INTERVAL = 30
+    BACKGROUND_CHECK_INTERVAL = 20
     CELERY = {
         'broker_url': os.environ.get("CELERY_BROKER_URL"),
         'result_backend': os.environ.get("CELERY_RESULT_BACKEND_URL"),
@@ -45,14 +47,14 @@ class Config:
             # Execute every 30sec (by default) after enabled by user
             'watchdog-task': {
                 'task': 'watchdog_task',
-                'schedule': schedules.schedule(run_every=30),
+                'schedule': schedules.schedule(run_every=WATCHDOG_CHECK_INTERVAL),
                 'relative': True,
                 'enabled': False
             },
-            # Execute every 20sec
+            # Execute every 20sec (by default) since the application is launched
             'background-task': {
                 'task': 'service_unknown_status_task',
-                'schedule': 20.0,
+                'schedule': BACKGROUND_CHECK_INTERVAL,
                 'relative': True,
                 'enabled': True
             }

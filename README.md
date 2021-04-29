@@ -130,14 +130,67 @@ As mentioned in the requirements, to run applications locally you need to instal
     ```
 
 ## Monitoring API Endpoints
-Below you can find the list of API endpoints (view from Swagger UI).
+Below you can find the list of API endpoints (view from Swagger UI - `http://localhost:8080/apidocs`).
 
 ![Application endpoints](./images/flassger-enpoints.png)
 
+## Examples of requests to the API
+Using the following requests, you can interact with the API using the `curl` tool. The following examples refer to `docker-compose` deployment.
 
+- List all services:
+    ```bash
+    curl -X GET -H "Content-Type: application/json" http://localhost:8080/services
+    ```
+- Create new service:
+    ```bash
+    curl -X POST -H "Content-Type: application/json" \
+      -d '{"name": "dns-google-01", "host": {"type": "ip", "value": "8.8.8.8"}, "proto": "udp", "port": "53"}' \
+      http://localhost:8080/services
+    ```
+- Delete all services:
+    ```bash
+    curl -X DELETE -H "Content-Type: application/json" http://localhost:8080/services
+    ```
+- Find specific service by id:
+    ```bash
+    curl -X GET -H "Content-Type: application/json" http://localhost:8080/services/6089dfa19f1da51c7a8670ad
+    ```
+- Update an existing service by id:
+    ```bash
+    curl -X PUT -H "Content-Type: application/json" \
+      -d '{"name": "dns-google-02", "host": {"type": "ip", "value": "8.8.4.4"}, "proto": "udp", "port": "53"}' \
+      http://localhost:8080/services/6089dfa19f1da51c7a8670ad
+    ```
+- Update an existing service's properties by id:
+    ```bash
+    curl -X PATCH -H "Content-Type: application/json" \
+      -d '{"name": "dns-public-server-01"}' \
+      http://localhost:8080/services/6089dfa19f1da51c7a8670ad
+    ```
+- Delete an existing service by id:
+    ```bash
+    curl -X DELETE -H "Content-Type: application/json" http://localhost:8080/services/6089dfa19f1da51c7a8670ad
+    ```
+- Check status of the watchdog service:
+    ```bash
+    curl -X GET -H "Content-Type: application/json" http://localhost:8080/watchdog
+    ```
+- Start the watchdog service:
+    ```bash
+    curl -X POST -H "Content-Type: application/json" \
+    -d '{"watchdog": "start"}' \
+    http://localhost:8080/watchdog
+    ```
+- Stop the watchdog service:
+    ```bash
+    curl -X POST -H "Content-Type: application/json" \
+    -d '{"watchdog": "stop"}' \
+    http://localhost:8080/watchdog
+    ```
 ## Testing
 
-Tests should be run locally (inside virtual environment - `venv`). After starting the application, run all tests with the following command:
+Tests should be run locally (inside virtual environment - `venv`) with MongoDB and Redis running. 
+After starting the application, run all tests with the following command:
 ```bash
 (venv) $ pytest -v
 ```
