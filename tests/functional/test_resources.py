@@ -121,7 +121,7 @@ def test_create_and_delete_service(test_client, example_service_data):
 def test_delete_service_not_exist(test_client):
     """
     GIVEN Flask application configured for testing and random generated service id
-    WHEN the '/services{service_id}' endpoint is requested (DELETE)
+    WHEN the '/services/{service_id}' endpoint is requested (DELETE)
     THEN check that a '404' code is returned
     """
     # Generate random service id
@@ -167,7 +167,73 @@ def test_delete_one_service_and_decreased_services_count(test_client):
     assert json_data['data']['services_total'] == services_total - 1
 
 
-# TODO: test for put and patch
+def test_put_service_not_exist(test_client):
+    """
+    GIVEN Flask application configured for testing and random generated service id
+    WHEN the '/services/{service_id}' endpoint is requested (PUT)
+    THEN check that a '404' code is returned
+    """
+    # Generate random service id
+    service_id = objectid.ObjectId()
+    response = test_client.put(f'/services/{service_id}')
+    json_data = response.get_json()
+    assert response.status_code == 404
+    assert json_data['message'] == f'Service with id {service_id} does not exist.'
+
+
+def test_put_service(test_client, example_service_data):
+    """
+    GIVEN Flask application configured for testing and service to update
+    WHEN the '/services/{service_id}' endpoint is requested (PUT)
+    THEN check that service exist and can be updated
+    """
+    response = test_client.get('/services')
+    json_data = response.get_json()
+    assert response.status_code == 200
+    # Get service id (1st service)
+    service_id = json_data['data']['services'][0]['id']
+    # Update service
+    post_data = example_service_data
+    post_data['name'] = 'service-updated-001'
+    post_data['host']['type'] = 'ip'
+    post_data['host']['value'] = '192.168.1.11'
+    headers = {
+        "Content-Type": "application/json",
+    }
+    response = test_client.put(f'/services/{service_id}', headers=headers, data=json.dumps(post_data))
+    assert response.status_code == 200
+
+
+def test_put_service_updated(test_client):
+    """
+    GIVEN Flask application configured for testing with updated service
+    WHEN the '/services' endpoint is requested (GET)
+    THEN check that service is updated correctly
+    """
+    response = test_client.get('/services')
+    json_data = response.get_json()
+    assert response.status_code == 200
+    # Get updated service (with PUT)
+    service = [service for service in json_data['data']['services'] if service['name'] == 'service-updated-001']
+    assert len(service) == 1
+    service = service[0]
+    assert service['host']['type'] == 'ip'
+    assert service['host']['value'] == '192.168.1.11'
+
+
+# TODO: test for patch and more watchdog tests
+
+
+def test_watchdog_not_running(test_client):
+    """
+    GIVEN Flask application configured for testing
+    WHEN the '/watchdog' endpoint is requested (GET) and watchdog service is not running
+    THEN watchdog service is down
+    """
+    response = test_client.get('/watchdog')
+    json_data = response.get_json()
+    assert response.status_code == 200
+    assert json_data['watchdog_status'] == 'down'
 
 
 def test_delete_all_services(test_client):
