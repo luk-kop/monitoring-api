@@ -27,15 +27,15 @@ class PaginationCursor:
         self.page_limit = page_limit
         if sort_by:
             if sort_by.startswith('-'):
-                self.sort_dir = 'descending'
+                self.sort_direction = 'descending'
                 self.sort_by = sort_by[1:]
             else:
-                self.sort_dir = 'ascending'
+                self.sort_direction = 'ascending'
                 self.sort_by = sort_by
         else:
             # Default sorting
             self.sort_by = 'id'
-            self.sort_dir = 'ascending'
+            self.sort_direction = 'ascending'
 
         if isinstance(iterable, QuerySet):
             self.total = iterable.count()
@@ -47,7 +47,7 @@ class PaginationCursor:
             # '_last_item' on the page - necessary to determine the new 'after'
             self._last_item = self.items[self.items_count - 1]
             # Check whether there are any objects in db behind '_last_item'
-            query_operator = f'{self.sort_by}__gt' if self.sort_dir == 'ascending' else f'{self.sort_by}__lt'
+            query_operator = f'{self.sort_by}__gt' if self.sort_direction == 'ascending' else f'{self.sort_by}__lt'
             items_kwargs = {
                 query_operator: getattr(self._last_item, f'{self.sort_by}')
             }
@@ -58,7 +58,7 @@ class PaginationCursor:
         self._first_item = self.items.first()
         if self._first_item:
             # Check whether there are any objects in db before '_firs_item'
-            query_operator = f'{self.sort_by}__lt' if self.sort_dir == 'ascending' else f'{self.sort_by}__gt'
+            query_operator = f'{self.sort_by}__lt' if self.sort_direction == 'ascending' else f'{self.sort_by}__gt'
             items_kwargs = {
                 query_operator: getattr(self._first_item, f'{self.sort_by}')
             }
@@ -97,14 +97,20 @@ class PaginationCursor:
         """
         if self.after_id or self.before_id:
             # Execute if 'after' or 'before' query param is present in URL
-            model_id = self.after_id if self.after_id  else self.before_id
+            model_id = self.after_id if self.after_id else self.before_id
             model = self.iterable(id=model_id).first()
-            if self.sort_dir == 'ascending':
+            if self.sort_direction == 'ascending':
                 query_operator = f'{self.sort_by}__gt' if self.after_id else f'{self.sort_by}__lt'
                 items_kwargs = {
                     query_operator: getattr(model, f'{self.sort_by}')
                 }
-                items = self.iterable(**items_kwargs).order_by(f'{self.sort_by}').limit(self.page_limit)
+                items = self.iterable(**items_kwargs).order_by(f'{self.sort_by}')
+                if self.after_id:
+                    items = items.limit(self.page_limit)
+                else:
+                    # If 'before' query param present get last 'self.page_limit' (count) from items.
+                    if len(items) > self.page_limit:
+                        items = items.skip(len(items) - self.page_limit)
             else:
                 query_operator = f'{self.sort_by}__lt' if self.after_id else f'{self.sort_by}__gt'
                 items_kwargs = {
@@ -113,7 +119,7 @@ class PaginationCursor:
                 items = self.iterable(**items_kwargs).order_by(f'-{self.sort_by}').limit(self.page_limit)
         else:
             # Execute if neither 'before' nor 'after' query params are present in URL
-            sort_order = self.sort_by if self.sort_dir == 'ascending' else f'-{self.sort_by}'
+            sort_order = self.sort_by if self.sort_direction == 'ascending' else f'-{self.sort_by}'
             items = self.iterable.order_by(sort_order).limit(self.page_limit)
         return items
 

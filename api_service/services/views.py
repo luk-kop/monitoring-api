@@ -18,7 +18,7 @@ from api_service.services.schemas import (
     error_parser,
     WatchdogSchema
 )
-
+from api_service.services.utils import set_services_query_params, get_services_to_dump
 
 serv_bp = Blueprint('serv_bp', __name__)
 
@@ -41,54 +41,11 @@ class ServicesApi(Resource):
         else:
             data_query_params = {}
         # Set query params
-        page_limit_default = current_app.config.get('DEFAULT_PAGINATION_LIMIT')
-        after_id = data_query_params.get('after', '')
-        before_id = data_query_params.get('before', '')
-        page_limit = data_query_params.get('limit', page_limit_default)
-        sort_by = data_query_params.get('sort', '')
+        query_params = set_services_query_params(data_query_params)
         # Get services with custom pagination
-        services = Service.paginate_cursor(after_id=after_id,
-                                           before_id=before_id,
-                                           page_limit=page_limit,
-                                           sort_by= sort_by)
-        # Define next and/or prev page url
-        next_url, prev_url = '', ''
-        if services.after or services.before:
-            url_kwargs = {
-                'resource': ServicesApi,
-                'limit': page_limit,
-                '_external': True
-            }
-            if sort_by:
-                url_kwargs['sort'] = sort_by
-            if services.after:
-                # Get next page url
-                next_url = api.url_for(**url_kwargs, after=services.after.id)
-            if services.before:
-                # Get prev page url
-                prev_url = api.url_for(**url_kwargs, before=services.before.id)
-        services_count_up = Service.objects(status='up').count()
+        services = Service.paginate_cursor(**query_params)
         # Prepare data to dump
-        paging = {
-            'limit': page_limit,
-            'cursors': {
-                'before': str(services.before.id) if services.before else '',
-                'after': str(services.after.id) if services.after else ''
-            },
-            'links': {
-                'previous': prev_url,
-                'next': next_url
-            }
-        }
-        data = {
-            'services_total': services.total,
-            'services_up': services_count_up,
-            'services': services.items,
-        }
-        services_to_dump = {
-            'paging': paging,
-            'data': data
-        }
+        services_to_dump = get_services_to_dump(resource=ServicesApi, services=services, query_params=query_params)
         # Serialize services with paging info
         schema = ServicesSchema()
         dumped_services = schema.dump(services_to_dump)

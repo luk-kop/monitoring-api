@@ -240,7 +240,7 @@ def test_patch_service_bad_request(test_client):
     json_data = response.get_json()
     assert response.status_code == 200
     # Get service for a test
-    service_id  = json_data['data']['services'][0]['id']
+    service_id = json_data['data']['services'][0]['id']
     # Service name already exists
     path_data = {'name': 'test-service-ssh'}
     response = test_client.patch(f'/services/{service_id}', headers=headers, data=json.dumps(path_data))
