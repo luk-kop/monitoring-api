@@ -1,7 +1,11 @@
 from flask import current_app
+from flask_restful import abort
+from bson import objectid
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from api_service.extensions import api
 from api_service.models import Service
+from api_service.watchdog_celery.monitoring import WatchdogEntry
 
 
 def set_services_query_params(data_query_params):
@@ -64,3 +68,33 @@ def get_services_to_dump(resource, services, query_params):
         'data': data
     }
     return services_to_dump
+
+
+def check_mongo_id(service_id):
+    """
+    Check whether id is 24-character hex string (compliant with the MongoDB '_id' field).
+    """
+    if not objectid.ObjectId.is_valid(service_id):
+        abort(400, message='The specified service id is invalid.', status=400)
+
+
+def check_service_exist(service_id):
+    """
+    Check whether service with specified id exists in database.
+    """
+    service = Service.objects(id=service_id).first()
+    if not service:
+        abort(404, message=f'Service with id {service_id} does not exist.', status=404)
+    return service
+
+
+def get_watchdog_job():
+    """
+    Return watchdog_job instance or 503.
+    """
+    try:
+        watchdog_job = WatchdogEntry()
+    except (KeyError, RedisConnectionError):
+        abort(503, message='Watchdog service unavailable.', status=503)
+    return watchdog_job
+

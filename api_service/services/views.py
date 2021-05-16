@@ -1,16 +1,12 @@
 from datetime import datetime
 from uuid import uuid4
 
-from flask import Blueprint, request, current_app
-from flask_restful import Resource, abort
-from bson import objectid
+from flask import Blueprint, request
+from flask_restful import Resource
 from marshmallow import ValidationError
 from flasgger import swag_from
-from redis.exceptions import ConnectionError as RedisConnectionError
 
-from api_service.extensions import api
 from api_service.models import Service
-from api_service.watchdog_celery.monitoring import WatchdogEntry
 from api_service.services.schemas import (
     ServiceSchema,
     ServiceSchemaQueryParams,
@@ -18,7 +14,13 @@ from api_service.services.schemas import (
     error_parser,
     WatchdogSchema
 )
-from api_service.services.utils import set_services_query_params, get_services_to_dump
+from api_service.services.utils import (
+    set_services_query_params,
+    get_services_to_dump,
+    check_mongo_id,
+    check_service_exist,
+    get_watchdog_job
+)
 
 serv_bp = Blueprint('serv_bp', __name__)
 
@@ -77,31 +79,13 @@ class ServicesApi(Resource):
 
 
 class ServiceApi(Resource):
-    @staticmethod
-    def check_id(service_id):
-        """
-        Check whether id is 24-character hex string (compliant with the MongoDB '_id' field).
-        """
-        if not objectid.ObjectId.is_valid(service_id):
-            abort(400, message='The specified service id is invalid.', status=400)
-
-    @staticmethod
-    def check_service_exist(service_id):
-        """
-        Check whether service with specified id exists.
-        """
-        service = Service.objects(id=service_id).first()
-        if not service:
-            abort(404, message=f'Service with id {service_id} does not exist.', status=404)
-        return service
-
     @swag_from("swagger/service_get.yml")
     def get(self, service_id):
         """
         Retrieve detailed information on the selected service.
         """
-        self.check_id(service_id)
-        service = self.check_service_exist(service_id)
+        check_mongo_id(service_id)
+        service = check_service_exist(service_id)
         schema = ServiceSchema()
         dumped_service = schema.dump(service)
         return {'service': dumped_service}, 200
@@ -112,8 +96,8 @@ class ServiceApi(Resource):
         Replace the specified service (if it exists).
         Full update to an existing resource.
         """
-        self.check_id(service_id)
-        service = self.check_service_exist(service_id)
+        check_mongo_id(service_id)
+        service = check_service_exist(service_id)
         request_data = request.get_json()
         schema = ServiceSchema()
         try:
@@ -145,8 +129,8 @@ class ServiceApi(Resource):
         Update selected details of specified service (if it exists).
         Partial update to an existing resource.
         """
-        self.check_id(service_id)
-        service = self.check_service_exist(service_id)
+        check_mongo_id(service_id)
+        service = check_service_exist(service_id)
         schema = ServiceSchema()
         request_data = request.get_json()
         try:
@@ -182,30 +166,19 @@ class ServiceApi(Resource):
         """
         Delete the specified service (if it exists).
         """
-        self.check_id(service_id)
-        service = self.check_service_exist(service_id)
+        check_mongo_id(service_id)
+        service = check_service_exist(service_id)
         service.delete()
         return {'message': f'Service with id {service_id} deleted.'}, 200
 
 
 class WatchdogApi(Resource):
-    @staticmethod
-    def get_watchdog_job():
-        """
-        Return watchdog_job instance or 503.
-        """
-        try:
-            watchdog_job = WatchdogEntry()
-        except (KeyError, RedisConnectionError):
-            abort(503, message='Watchdog service unavailable.', status=503)
-        return watchdog_job
-
     @swag_from("swagger/watchdog_get.yml")
     def get(self):
         """
         Return information whether the watchdog service is running.
         """
-        watchdog_job = self.get_watchdog_job()
+        watchdog_job = get_watchdog_job()
         if watchdog_job.enabled:
             return {'watchdog_status': 'up'}, 200
         else:
@@ -225,7 +198,7 @@ class WatchdogApi(Resource):
             errors_custom = error_parser(error)
             return {'message': errors_custom, 'status': 400}, 400
         watchdog_data = result.get('watchdog')
-        watchdog_job = self.get_watchdog_job()
+        watchdog_job = get_watchdog_job()
         if watchdog_job.enabled and watchdog_data == 'start':
             return {'message': 'The watchdog is already running.', 'status': 400}, 400
         elif watchdog_job.enabled and watchdog_data == 'stop':
