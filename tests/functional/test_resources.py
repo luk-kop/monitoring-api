@@ -1,5 +1,6 @@
 import json
 from bson import objectid
+from flask import current_app
 
 
 def test_get_services_endpoint_empty(test_client):
@@ -134,7 +135,7 @@ def test_delete_service_not_exist(test_client):
     assert json_data['message'] == f'Service with id {service_id} does not exist.'
 
 
-def test_count_services_after_added(test_client, add_services):
+def test_count_services_after_added(test_client, add_two_services):
     """
     GIVEN Flask application configured for testing and additional services in db
     WHEN the '/services' endpoint is requested (GET)
@@ -394,6 +395,149 @@ def test_patch_service_updated(test_client):
     assert service['port'] == '321'
 
 
+def test_get_paging_limit_is_default(test_client):
+    """
+    GIVEN Flask application configured for testing and services in db
+    WHEN default pagination limit is used
+    THEN pagination limit from response should be equal to default pagination limit, all services on one page
+    """
+    response = test_client.get('/services')
+    json_data = response.get_json()
+    page_limit_default = current_app.config.get('DEFAULT_PAGINATION_LIMIT')
+    page_limit_data = json_data['paging']['limit']
+    assert page_limit_default == page_limit_data
+    # All services on one page - no cursors data
+    cursor_before = json_data['paging']['cursors']['before']
+    cursor_after = json_data['paging']['cursors']['after']
+    assert cursor_before == ''
+    assert cursor_after == ''
+    # All services on one page - no URLs
+    url_prev = json_data['paging']['links']['previous']
+    url_next = json_data['paging']['links']['next']
+    assert url_prev == ''
+    assert url_next == ''
+
+
+def test_add_four_services_for_pagination(test_client, add_four_services):
+    """
+    GIVEN Flask application configured for testing and four additional services in db
+    WHEN the '/services' endpoint is requested (GET)
+    THEN check that a '200' code is returned and number of returned services in db
+    """
+    response = test_client.get('/services')
+    json_data = response.get_json()
+    assert response.status_code == 200
+    assert len(json_data['data']['services']) == 6
+
+
+def test_get_paging_limit_set_to_custom(test_client):
+    """
+    GIVEN Flask application configured for testing and services in db
+    WHEN custom pagination limit is used (only 'limit' query param in URL)
+    THEN pagination limit from response should be equal to custom pagination limit, services on several pages
+    """
+    response = test_client.get('/services?limit=2')
+    json_data = response.get_json()
+    page_limit_custom = 2
+    page_limit_data = json_data['paging']['limit']
+    assert page_limit_custom == page_limit_data
+    # All services several pages. Response returns first page.
+    cursor_before = json_data['paging']['cursors']['before']
+    cursor_after = json_data['paging']['cursors']['after']
+    assert cursor_before == ''
+    assert cursor_after != ''
+    # All services several pages. Response returns first page.
+    url_prev = json_data['paging']['links']['previous']
+    url_next = json_data['paging']['links']['next']
+    assert url_prev == ''
+    assert url_next != ''
+
+
+def test_cursor_after_with_custom_pagination_limit(test_client):
+    """
+    GIVEN Flask application configured for testing and services in db
+    WHEN Custom pagination limit is used (only 'limit' query param in URL)
+    THEN Response returns first page. Id of last service on page should be equal to 'after' cursor
+    """
+    response = test_client.get('/services?limit=2')
+    json_data = response.get_json()
+    last_service_id = json_data['data']['services'][-1]['id']
+    cursor_after = json_data['paging']['cursors']['after']
+    # id of last service on page should be equal to 'after' cursor
+    assert last_service_id == cursor_after
+
+
+def test_cursor_after_next_page(test_client):
+    """
+    GIVEN Flask application configured for testing and services in db
+    WHEN Custom pagination limit is used with 'after' query param
+    THEN Response returns second page with proper data
+    """
+    # Get cursor_after from first page
+    response = test_client.get('/services?limit=2')
+    json_data = response.get_json()
+    cursor_after = json_data['paging']['cursors']['after']
+    # Get next page (second page)
+    response = test_client.get(f'/services?limit=2&after={cursor_after}')
+    assert response.status_code == 200
+    json_data = response.get_json()
+    # Get id of first service on next page
+    first_service_id = json_data['data']['services'][0]['id']
+    second_service_id = json_data['data']['services'][1]['id']
+    # Use bson to test proper order
+    cursor_after_bson_id = objectid.ObjectId(cursor_after)
+    first_service_bson_id = objectid.ObjectId(first_service_id)
+    second_service_bson_id = objectid.ObjectId(second_service_id)
+    # Check that first id gt cursor
+    assert cursor_after_bson_id < first_service_bson_id
+    # Check that second id gt first id
+    assert first_service_bson_id < second_service_bson_id
+    # Check cursors on second page
+    cursor_before_next_page = json_data['paging']['cursors']['before']
+    cursor_after_next_page = json_data['paging']['cursors']['after']
+    assert cursor_before_next_page == first_service_id
+    assert cursor_after_next_page == second_service_id
+    # Check that URLs are not empty.
+    url_prev = json_data['paging']['links']['previous']
+    url_next = json_data['paging']['links']['next']
+    assert url_prev != ''
+    assert url_next != ''
+
+
+def test_cursor_before_prev_page(test_client):
+    """
+    GIVEN Flask application configured for testing and services in db
+    WHEN Custom pagination limit is used with 'before' query param
+    THEN Response returns first page with proper data
+    """
+    # Get cursor_after from first page
+    response = test_client.get('/services?limit=2')
+    json_data = response.get_json()
+    cursor_after = json_data['paging']['cursors']['after']
+    # Get next page (second page)
+    response = test_client.get(f'/services?limit=2&after={cursor_after}')
+    json_data = response.get_json()
+    # Get id of first service on next page
+    first_service_id = json_data['data']['services'][0]['id']
+    # Get 'before' cursor on next page
+    cursor_before_next_page = json_data['paging']['cursors']['before']
+    assert cursor_before_next_page == first_service_id
+    # Get previous page (first page)
+    response = test_client.get(f'/services?limit=2&before={cursor_before_next_page}')
+    assert response.status_code == 200
+    json_data = response.get_json()
+    first_service_id = json_data['data']['services'][0]['id']
+    second_service_id = json_data['data']['services'][1]['id']
+    # Use bson to test proper order
+    cursor_before_bson_id = objectid.ObjectId(cursor_before_next_page)
+    first_service_bson_id = objectid.ObjectId(first_service_id)
+    second_service_bson_id = objectid.ObjectId(second_service_id)
+    # Check that first id lt second id
+    assert first_service_bson_id < second_service_bson_id
+    # Check that second id lt before cursor
+    assert first_service_bson_id < cursor_before_bson_id
+
+
 def test_watchdog_not_running(test_client):
     """
     GIVEN Flask application configured for testing and watchdog service is not running
@@ -404,6 +548,18 @@ def test_watchdog_not_running(test_client):
     json_data = response.get_json()
     assert response.status_code == 200
     assert json_data['watchdog_status'] == 'down'
+
+
+def test_get_services_status_watchdog_not_running(test_client):
+    """
+    GIVEN Flask application configured for testing and services in db
+    WHEN watchdog service not running
+    THEN status of all services should be 'unknown'
+    """
+    response = test_client.get('/services')
+    json_data = response.get_json()
+    for service in json_data['data']['services']:
+        assert service['status'] == 'unknown'
 
 
 def test_watchdog_start(test_client):

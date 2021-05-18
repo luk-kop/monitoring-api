@@ -34,7 +34,7 @@ def test_client():
 
 
 @fixture(scope='module')
-def add_services(test_client):
+def add_two_services(test_client):
     services_data = [
         {
             'name': 'test-service-telnet-03',
@@ -53,6 +53,50 @@ def add_services(test_client):
             },
             'proto': 'tcp',
             'port': '22'
+        }
+    ]
+    for service in services_data:
+        Service(**service).save()
+
+
+@fixture(scope='module')
+def add_four_services(test_client):
+    services_data = [
+        {
+            'name': 'test-google-dns-01',
+            'host': {
+                'type': 'ip',
+                'value': '8.8.8.8'
+            },
+            'proto': 'udp',
+            'port': '53'
+        },
+        {
+            'name': 'test-google.com',
+            'host': {
+                'type': 'hostname',
+                'value': 'www.google.com'
+            },
+            'proto': 'tcp',
+            'port': '443'
+        },
+        {
+            'name': 'test-fake-service-01',
+            'host': {
+                'type': 'ip',
+                'value': '192.168.1.1'
+            },
+            'proto': 'tcp',
+            'port': '1234'
+        },
+        {
+            'name': 'test-fake-service-02',
+            'host': {
+                'type': 'ip',
+                'value': '192.168.1.2'
+            },
+            'proto': 'udp',
+            'port': '1234'
         }
     ]
     for service in services_data:
