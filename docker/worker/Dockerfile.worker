@@ -6,8 +6,7 @@ WORKDIR /home/watchdog
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Copy services's files as watchdog user
-COPY --chown=watchdog:watchdog . .
+COPY --chown=watchdog:watchdog requirements.txt .
 
 # Install dependencies and netcat
 RUN pip install -r requirements.txt \
@@ -17,5 +16,8 @@ RUN pip install -r requirements.txt \
 	&& apt-get install -y sudo \
 	&& apt-get clean \
 	&& echo 'watchdog ALL = (ALL) NOPASSWD: /usr/bin/nmap' >> /etc/sudoers
+
+# Copy services's files as watchdog user
+COPY --chown=watchdog:watchdog . .
 
 USER watchdog
